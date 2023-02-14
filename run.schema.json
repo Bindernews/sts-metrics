@@ -1,0 +1,1088 @@
+{
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "$id": "https://github.com/bindernews/sts-metrics-server/run.schema.json",
+  "type": "object",
+  "default": {},
+  "title": "Slay the Spire Run Schema",
+  "required": [
+      "gold_per_floor",
+      "floor_reached",
+      "playtime",
+      "items_purged",
+      "score",
+      "play_id",
+      "local_time",
+      "is_ascension_mode",
+      "campfire_choices",
+      "neow_cost",
+      "seed_source_timestamp",
+      "circlet_count",
+      "master_deck",
+      "relics",
+      "potions_floor_usage",
+      "damage_taken",
+      "seed_played",
+      "potions_obtained",
+      "is_trial",
+      "path_per_floor",
+      "character_chosen",
+      "items_purchased",
+      "campfire_rested",
+      "item_purchase_floors",
+      "current_hp_per_floor",
+      "gold",
+      "neow_bonus",
+      "is_prod",
+      "is_daily",
+      "chose_seed",
+      "campfire_upgraded",
+      "win_rate",
+      "timestamp",
+      "path_taken",
+      "build_version",
+      "purchased_purges",
+      "victory",
+      "max_hp_per_floor",
+      "card_choices",
+      "player_experience",
+      "relics_obtained",
+      "event_choices",
+      "is_beta",
+      "boss_relics",
+      "items_purged_floors",
+      "is_endless",
+      "potions_floor_spawned",
+      "killed_by",
+      "ascension_level"
+  ],
+  "properties": {
+      "gold_per_floor": {
+          "type": "array",
+          "title": "gold_per_floor",
+          "description": "How much gold was obtained on each floor",
+          "items": { "type": "integer" },
+          "examples": [
+              [115, 135, 12, 12, 31, 31, 42, 42, 42, 67, 87, 87, 106, 123, 123, 223, 223, 243, 198 ]
+          ]
+      },
+      "floor_reached": {
+          "type": "integer",
+          "default": 0,
+          "title": "floor_reached",
+          "description": "What floor number the player reached",
+          "examples": [19]
+      },
+      "playtime": {
+          "type": "integer",
+          "default": 0,
+          "title": "playtime",
+          "description": "Play time in seconds",
+          "examples": [
+              762
+          ]
+      },
+      "items_purged": {
+          "type": "array",
+          "default": [],
+          "title": "items_purged",
+          "description": "List of removed card IDs",
+          "items": { "type": "string" },
+          "examples": [
+            [ "Strike_P"]
+          ]
+      },
+      "score": {
+          "type": "integer",
+          "default": 0,
+          "title": "score",
+          "description": "Player's score at the end of the run",
+          "examples": [
+              265
+          ]
+      },
+      "play_id": {
+          "type": "string",
+          "format": "uuid",
+          "title": "play_id",
+          "description": "UUID for this run",
+          "examples": [
+              "69aa9b89-aa88-48b3-bc91-d9f6b4cd0c7b"
+          ]
+      },
+      "local_time": {
+          "type": "string",
+          "title": "local_time",
+          "description": "Local time in YYYYmmddHHMMSS format"
+      },
+      "is_ascension_mode": {
+          "type": "boolean",
+          "default": false,
+          "title": "is_ascension_mode",
+          "description": "Is the player playing on some ascension mode?"
+      },
+      "campfire_choices": {
+          "type": "array",
+          "default": [],
+          "title": "The campfire_choices Schema",
+          "items": { "$ref": "#/definitions/CampfireChoice" }
+      },
+      "neow_cost": {
+          "type": "string",
+          "title": "neow_cost",
+          "description": "TODO",
+          "examples": [
+              "NONE"
+          ]
+      },
+      "seed_source_timestamp": {
+          "type": "integer",
+          "default": 0,
+          "title": "seed_source_timestamp",
+          "examples": [
+              262212706806399
+          ]
+      },
+      "circlet_count": {
+          "type": "integer",
+          "default": 0,
+          "title": "circlet_count",
+          "description": "How many unknown relics the player had"
+      },
+      "master_deck": {
+          "type": "array",
+          "default": [],
+          "title": "The master_deck Schema",
+          "description": "List of card IDs in the master deck, +1 indicates an upgraded card",
+          "items": { "type": "string", "title": "Card ID" },
+          "examples": [[
+            "AscendersBane", "Strike_P", "Strike_P", "Strike_P", "Defend_P", "Defend_P",
+            "Defend_P", "Defend_P", "Eruption+1", "Vigilance", "PanicButton", "Prostrate+1",
+            "EmptyFist", "FlurryOfBlows", "Prostrate", "Vengeance", "FlurryOfBlows", "FollowUp",
+            "SpiritShield", "Evaluate", "LessonLearned+1", "ThirdEye+1"
+          ]]
+      },
+      "relics": {
+          "type": "array",
+          "default": [],
+          "title": "The relics Schema",
+          "items": { "type": "string", "title": "Relic ID" },
+          "examples": [["PureWater", "StoneCalendar", "Peace Pipe", "Anchor", "Cursed Key" ]]
+      },
+      "potions_floor_usage": {
+          "type": "array",
+          "default": [],
+          "title": "potions_floor_usage",
+          "description": "Which floors the player used a potion on",
+          "items": { "type": "integer", "title": "floor number" },
+          "examples": [ [10, 11, 11 ] ]
+      },
+      "damage_taken": {
+          "type": "array",
+          "default": [],
+          "title": "List of DamageTaken",
+          "description": "List of DamageTaken events",
+          "items": { "$ref": "#/definitions/DamageTaken" }
+      },
+      "seed_played": {
+          "type": "string",
+          "description": "The run seed",
+          "examples": [
+              "601258677779474488"
+          ]
+      },
+      "potions_obtained": {
+          "type": "array",
+          "default": [],
+          "title": "The potions_obtained Schema",
+          "items": { "$ref": "#/definitions/PotionObtained" }
+      },
+      "is_trial": {
+          "type": "boolean",
+          "default": false,
+          "description": "Is this a custom trial run"
+      },
+      "path_per_floor": {
+          "type": "array",
+          "title": "path_per_floor",
+          "items": { "$ref": "#/definitions/FloorPath" },
+          "examples": [
+              ["M", "M", "$", "?", "M", "R", "M", "R", "T", "E", "M", "?", "M", "M", "R", "B", null, "M", "M" ]
+          ]
+      },
+      "character_chosen": {
+          "type": "string",
+          "title": "character_chosen",
+          "examples": [ "WATCHER", "SILENT" ]
+      },
+      "items_purchased": {
+          "type": "array",
+          "default": [],
+          "title": "The items_purchased Schema",
+          "items": {
+              "type": "string",
+              "default": "",
+              "title": "A Schema",
+              "examples": [
+                  "FlurryOfBlows"
+              ]
+          },
+          "examples": [ [ "FlurryOfBlows"] ]
+      },
+      "campfire_rested": {
+          "type": "integer",
+          "default": 0,
+          "description": "Number of times rested at a campfire",
+          "examples": [ 1 ]
+      },
+      "item_purchase_floors": {
+          "type": "array",
+          "default": [],
+          "title": "The item_purchase_floors Schema",
+          "items": {
+              "type": "integer",
+              "default": 0,
+              "title": "A Schema"
+          },
+          "examples": [ [3] ]
+      },
+      "current_hp_per_floor": {
+          "type": "array",
+          "default": [],
+          "title": "The current_hp_per_floor Schema",
+          "items": { "type": "integer" },
+          "examples": [
+              [ 61, 51, 51, 51, 51, 51, 42, 42, 42, 17, 17, 17, 17, 17, 40, 6, 59, 11, 0 ]
+          ]
+      },
+      "gold": {
+          "type": "integer",
+          "default": 0,
+          "title": "gold",
+          "description": "Gold amount at the end of the run"
+      },
+      "neow_bonus": {
+          "type": "string",
+          "default": "",
+          "title": "neow_bonus",
+          "description": "ID of player's Neow choice",
+          "examples": [ "RANDOM_COLORLESS" ]
+      },
+      "is_prod": {
+          "type": "boolean",
+          "default": false,
+          "title": "The is_prod Schema"
+      },
+      "is_daily": {
+          "type": "boolean",
+          "default": false,
+          "title": "The is_daily Schema"
+      },
+      "chose_seed": {
+          "type": "boolean",
+          "default": false,
+          "title": "chose_seed",
+          "description": "Was the entered manually (true) or random (false)"
+      },
+      "campfire_upgraded": {
+          "type": "integer",
+          "default": 0,
+          "title": "The campfire_upgraded Schema",
+          "examples": [ 2 ]
+      },
+      "win_rate": {
+          "type": "integer",
+          "default": 0,
+          "title": "The win_rate Schema",
+          "examples": [ 0 ]
+      },
+      "timestamp": {
+          "type": "integer",
+          "default": 0,
+          "title": "The timestamp Schema",
+          "examples": [ 1673745382 ]
+      },
+      "path_taken": {
+          "type": "array",
+          "default": [],
+          "title": "The path_taken Schema",
+          "description": "Path the player took",
+          "items": { "type": "string" },
+          "examples": [
+              ["M", "M", "$", "?", "M", "R", "?", "R", "T", "E", "M", "?", "M", "M", "R", "BOSS", "M", "?" ]
+          ]
+      },
+      "build_version": {
+          "type": "string",
+          "default": "",
+          "title": "The build_version Schema",
+          "examples": [ "2022-12-18" ]
+      },
+      "purchased_purges": {
+          "type": "integer",
+          "default": 0,
+          "title": "The purchased_purges Schema",
+          "examples": [ 1 ]
+      },
+      "victory": {
+          "type": "boolean",
+          "default": false,
+          "title": "The victory Schema",
+          "examples": [ false ]
+      },
+      "max_hp_per_floor": {
+          "type": "array",
+          "title": "The max_hp_per_floor Schema",
+          "items": { "type": "integer" },
+          "examples": [
+              [72, 72, 72, 72, 72, 72, 72, 72, 72, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77 ]
+          ]
+      },
+      "card_choices": {
+        "type": "array",
+        "default": [],
+        "description": "List of card choices",
+        "items": { "$ref": "#/definitions/CardChoice" }
+      },
+      "player_experience": {
+        "type": "integer",
+        "default": 0,
+        "title": "The player_experience Schema",
+        "description": "XP gained at the end of the run",
+        "examples": [ 361089 ]
+      },
+      "relics_obtained": {
+        "type": "array",
+        "default": [],
+        "title": "The relics_obtained Schema",
+        "items": { "$ref": "#/definitions/RelicObtain" }
+      },
+      "event_choices": {
+          "type": "array",
+          "default": [],
+          "title": "The event_choices Schema",
+          "items": { "$ref": "#/definitions/EventChoice" }
+      },
+      "is_beta": {
+          "type": "boolean",
+          "default": false,
+          "title": "The is_beta Schema"
+      },
+      "boss_relics": {
+          "type": "array",
+          "default": [],
+          "title": "The boss_relics Schema",
+          "items": {
+              "type": "object",
+              "default": {},
+              "title": "A Schema",
+              "required": [
+                  "not_picked",
+                  "picked"
+              ],
+              "properties": {
+                  "not_picked": {
+                      "type": "array",
+                      "default": [],
+                      "title": "The not_picked Schema",
+                      "items": {
+                          "type": "string",
+                          "title": "A Schema",
+                          "examples": [
+                              "Velvet Choker",
+                              "SacredBark"
+                          ]
+                      },
+                      "examples": [
+                          ["Velvet Choker",
+                              "SacredBark"
+                          ]
+                      ]
+                  },
+                  "picked": {
+                      "type": "string",
+                      "default": "",
+                      "title": "The picked Schema",
+                      "examples": [
+                          "Cursed Key"
+                      ]
+                  }
+              },
+              "examples": [{
+                  "not_picked": [
+                      "Velvet Choker",
+                      "SacredBark"
+                  ],
+                  "picked": "Cursed Key"
+              }]
+          },
+          "examples": [
+              [{
+                  "not_picked": [
+                      "Velvet Choker",
+                      "SacredBark"
+                  ],
+                  "picked": "Cursed Key"
+              }]
+          ]
+      },
+      "items_purged_floors": {
+          "type": "array",
+          "default": [],
+          "title": "The items_purged_floors Schema",
+          "items": { "type": "integer" },
+          "examples": [ [ 3] ]
+      },
+      "is_endless": {
+          "type": "boolean",
+          "default": false,
+          "title": "is_endless",
+          "description": "Is Endless mode"
+      },
+      "potions_floor_spawned": {
+          "type": "array",
+          "default": [],
+          "title": "The potions_floor_spawned Schema",
+          "items": { "type": "integer" },
+          "examples": [ [1, 10, 11, 16 ] ]
+      },
+      "killed_by": {
+          "type": "string",
+          "default": "",
+          "title": "killed_by",
+          "description": "Encounter ID where player died",
+          "examples": [ "2 Thieves" ]
+      },
+      "ascension_level": {
+          "type": "integer",
+          "default": 0,
+          "title": "ascension_level",
+          "description": "The Ascension level (0 - 20) TODO - does this appear on 0 ascension?"
+      }
+  },
+  "examples": [{
+      "gold_per_floor": [
+          115,
+          135,
+          12,
+          12,
+          31,
+          31,
+          42,
+          42,
+          42,
+          67,
+          87,
+          87,
+          106,
+          123,
+          123,
+          223,
+          223,
+          243,
+          198
+      ],
+      "floor_reached": 19,
+      "playtime": 762,
+      "items_purged": [
+          "Strike_P"
+      ],
+      "score": 265,
+      "play_id": "69aa9b89-aa88-48b3-bc91-d9f6b4cd0c7b",
+      "local_time": "20230114201622",
+      "is_ascension_mode": true,
+      "campfire_choices": [{
+          "data": "Eruption",
+          "floor": 6,
+          "key": "SMITH"
+      },
+      {
+          "data": "Prostrate",
+          "floor": 8,
+          "key": "SMITH"
+      },
+      {
+          "floor": 15,
+          "key": "REST"
+      }],
+      "neow_cost": "NONE",
+      "seed_source_timestamp": 262212706806399,
+      "circlet_count": 0,
+      "master_deck": [
+          "AscendersBane",
+          "Strike_P",
+          "Strike_P",
+          "Strike_P",
+          "Defend_P",
+          "Defend_P",
+          "Defend_P",
+          "Defend_P",
+          "Eruption+1",
+          "Vigilance",
+          "PanicButton",
+          "Prostrate+1",
+          "EmptyFist",
+          "FlurryOfBlows",
+          "Prostrate",
+          "Vengeance",
+          "FlurryOfBlows",
+          "FollowUp",
+          "SpiritShield",
+          "Evaluate",
+          "LessonLearned+1",
+          "ThirdEye+1"
+      ],
+      "relics": [
+          "PureWater",
+          "StoneCalendar",
+          "Peace Pipe",
+          "Anchor",
+          "Cursed Key"
+      ],
+      "potions_floor_usage": [
+          10,
+          11,
+          11
+      ],
+      "damage_taken": [{
+          "damage": 4,
+          "enemies": "Jaw Worm",
+          "floor": 1,
+          "turns": 3
+      },
+      {
+          "damage": 10,
+          "enemies": "Cultist",
+          "floor": 2,
+          "turns": 4
+      },
+      {
+          "damage": 0,
+          "enemies": "2 Louse",
+          "floor": 5,
+          "turns": 3
+      },
+      {
+          "damage": 9,
+          "enemies": "Looter",
+          "floor": 7,
+          "turns": 4
+      },
+      {
+          "damage": 30,
+          "enemies": "Gremlin Nob",
+          "floor": 10,
+          "turns": 5
+      },
+      {
+          "damage": 0,
+          "enemies": "Gremlin Gang",
+          "floor": 11,
+          "turns": 2
+      },
+      {
+          "damage": 0,
+          "enemies": "3 Louse",
+          "floor": 13,
+          "turns": 3
+      },
+      {
+          "damage": 0,
+          "enemies": "Looter",
+          "floor": 14,
+          "turns": 2
+      },
+      {
+          "damage": 34,
+          "enemies": "Slime Boss",
+          "floor": 16,
+          "turns": 7
+      },
+      {
+          "damage": 48,
+          "enemies": "3 Byrds",
+          "floor": 18,
+          "turns": 7
+      },
+      {
+          "damage": 11,
+          "enemies": "2 Thieves",
+          "floor": 19,
+          "turns": 2
+      }],
+      "seed_played": "601258677779474488",
+      "potions_obtained": [{
+          "floor": 1,
+          "key": "Swift Potion"
+      },
+      {
+          "floor": 4,
+          "key": "Dexterity Potion"
+      },
+      {
+          "floor": 4,
+          "key": "EntropicBrew"
+      },
+      {
+          "floor": 10,
+          "key": "Fruit Juice"
+      },
+      {
+          "floor": 11,
+          "key": "EntropicBrew"
+      },
+      {
+          "floor": 16,
+          "key": "Dexterity Potion"
+      }],
+      "is_trial": false,
+      "path_per_floor": [
+          "M",
+          "M",
+          "$",
+          "?",
+          "M",
+          "R",
+          "M",
+          "R",
+          "T",
+          "E",
+          "M",
+          "?",
+          "M",
+          "M",
+          "R",
+          "B",
+          null,
+          "M",
+          "M"
+      ],
+      "character_chosen": "WATCHER",
+      "items_purchased": [
+          "FlurryOfBlows"
+      ],
+      "campfire_rested": 1,
+      "item_purchase_floors": [
+          3
+      ],
+      "current_hp_per_floor": [
+          61,
+          51,
+          51,
+          51,
+          51,
+          51,
+          42,
+          42,
+          42,
+          17,
+          17,
+          17,
+          17,
+          17,
+          40,
+          6,
+          59,
+          11,
+          0
+      ],
+      "gold": 198,
+      "neow_bonus": "RANDOM_COLORLESS",
+      "is_prod": false,
+      "is_daily": false,
+      "chose_seed": false,
+      "campfire_upgraded": 2,
+      "win_rate": 0,
+      "timestamp": 1673745382,
+      "path_taken": [
+          "M",
+          "M",
+          "$",
+          "?",
+          "M",
+          "R",
+          "?",
+          "R",
+          "T",
+          "E",
+          "M",
+          "?",
+          "M",
+          "M",
+          "R",
+          "BOSS",
+          "M",
+          "?"
+      ],
+      "build_version": "2022-12-18",
+      "purchased_purges": 1,
+      "victory": false,
+      "max_hp_per_floor": [
+          72,
+          72,
+          72,
+          72,
+          72,
+          72,
+          72,
+          72,
+          72,
+          77,
+          77,
+          77,
+          77,
+          77,
+          77,
+          77,
+          77,
+          77,
+          77
+      ],
+      "card_choices": [{
+          "not_picked": [
+              "Forethought",
+              "Mind Blast"
+          ],
+          "picked": "PanicButton",
+          "floor": 0
+      },
+      {
+          "not_picked": [
+              "Consecrate",
+              "PathToVictory"
+          ],
+          "picked": "Prostrate",
+          "floor": 1
+      },
+      {
+          "not_picked": [
+              "JustLucky",
+              "CutThroughFate"
+          ],
+          "picked": "EmptyFist",
+          "floor": 2
+      },
+      {
+          "not_picked": [
+              "ClearTheMind",
+              "Collect"
+          ],
+          "picked": "Prostrate",
+          "floor": 5
+      },
+      {
+          "not_picked": [
+              "ForeignInfluence",
+              "Weave"
+          ],
+          "picked": "Vengeance",
+          "floor": 7
+      },
+      {
+          "not_picked": [
+              "FlyingSleeves",
+              "CarveReality"
+          ],
+          "picked": "FlurryOfBlows",
+          "floor": 10
+      },
+      {
+          "not_picked": [
+              "Conclude",
+              "JustLucky"
+          ],
+          "picked": "FollowUp",
+          "floor": 11
+      },
+      {
+          "not_picked": [
+              "Nirvana",
+              "Crescendo"
+          ],
+          "picked": "SpiritShield",
+          "floor": 13
+      },
+      {
+          "not_picked": [
+              "ThirdEye",
+              "Protect"
+          ],
+          "picked": "Evaluate",
+          "floor": 14
+      },
+      {
+          "not_picked": [
+              "Vault",
+              "MasterReality"
+          ],
+          "picked": "LessonLearned",
+          "floor": 16
+      },
+      {
+          "not_picked": [
+              "Tantrum+1",
+              "FollowUp"
+          ],
+          "picked": "ThirdEye+1",
+          "floor": 18
+      }],
+      "player_experience": 361089,
+      "relics_obtained": [{
+          "floor": 9,
+          "key": "StoneCalendar"
+      },
+      {
+          "floor": 10,
+          "key": "Peace Pipe"
+      }],
+      "event_choices": [{
+          "damage_healed": 0,
+          "gold_gain": 0,
+          "player_choice": "Got Potions",
+          "damage_taken": 0,
+          "max_hp_gain": 0,
+          "max_hp_loss": 0,
+          "event_name": "Lab",
+          "floor": 4,
+          "gold_loss": 0
+      },
+      {
+          "damage_healed": 0,
+          "gold_gain": 0,
+          "player_choice": "Gave Potion",
+          "damage_taken": 0,
+          "relics_obtained": [
+              "Anchor"
+          ],
+          "max_hp_gain": 0,
+          "max_hp_loss": 0,
+          "event_name": "WeMeetAgain",
+          "floor": 12,
+          "gold_loss": 0
+      }],
+      "is_beta": false,
+      "boss_relics": [{
+          "not_picked": [
+              "Velvet Choker",
+              "SacredBark"
+          ],
+          "picked": "Cursed Key"
+      }],
+      "items_purged_floors": [
+          3
+      ],
+      "is_endless": false,
+      "potions_floor_spawned": [
+          1,
+          10,
+          11,
+          16
+      ],
+      "killed_by": "2 Thieves",
+      "ascension_level": 11
+  }],
+    "definitions": {
+        "CampfireChoice": {
+        "type": "object",
+        "title": "Campfire Choice",
+        "description": "One campfire selection",
+        "required": [ "data", "floor", "key" ],
+        "properties": {
+            "data": {
+                "type": "string",
+                "title": "Choice data",
+                "description": "If KEY is 'SMITH', this will be the card ID that was upgraded",
+                "examples": ["Eruption", "Prostrate" ]
+            },
+            "floor": {
+                "type": "integer",
+                "title": "Campfire floor",
+                "description": "Which floor the campfire was on",
+                "examples": [ 6, 8, 15 ]
+            },
+            "key": {
+                "type": "string",
+                "title": "Campfire action",
+                "examples": ["SMITH", "REST" ]
+            }
+        },
+        "examples": [
+            { "data": "Eruption", "floor": 6, "key": "SMITH" },
+            { "data": "Prostrate", "floor": 8, "key": "SMITH" },
+            { "floor": 15, "key": "REST" }
+        ]
+        },
+        "CardChoice": {
+            "type": "object",
+            "title": "Card Choice",
+            "description": "One card choice",
+            "required": [
+                "not_picked",
+                "picked",
+                "floor"
+            ],
+            "properties": {
+                "not_picked": {
+                    "type": "array",
+                    "description": "Cards that were not picked",
+                    "items": { "type": "string" }
+                },
+                "picked": { "type": "string", "title": "Card that was picked" },
+                "floor": { "type": "integer" }
+            },
+            "examples": [
+                { "not_picked": [ "Forethought", "Mind Blast" ], "picked": "PanicButton", "floor": 0 },
+                { "not_picked": [ "Consecrate", "PathToVictory" ], "picked": "Prostrate", "floor": 1 },
+                { "not_picked": [ "JustLucky", "CutThroughFate" ], "picked": "EmptyFist", "floor": 2 },
+                { "not_picked": [ "ClearTheMind", "Collect" ], "picked": "Prostrate", "floor": 5 },
+                { "not_picked": [ "ForeignInfluence", "Weave" ], "picked": "Vengeance", "floor": 7 },
+                { "not_picked": [ "FlyingSleeves", "CarveReality" ], "picked": "FlurryOfBlows", "floor": 10 },
+                { "not_picked": [ "Conclude", "JustLucky" ], "picked": "FollowUp", "floor": 11 },
+                { "not_picked": [ "Nirvana", "Crescendo" ], "picked": "SpiritShield", "floor": 13 },
+                { "not_picked": [ "ThirdEye", "Protect" ], "picked": "Evaluate", "floor": 14 },
+                { "not_picked": [ "Vault", "MasterReality" ], "picked": "LessonLearned", "floor": 16 },
+                { "not_picked": [ "Tantrum+1", "FollowUp" ], "picked": "ThirdEye+1", "floor": 18 }
+            ]
+        },
+        "DamageTaken": {
+        "type": "object",
+        "title": "A Schema",
+        "required": [
+            "damage",
+            "enemies",
+            "floor",
+            "turns"
+        ],
+        "properties": {
+            "damage": {
+                "type": "integer",
+                "title": "Damage Amount",
+                "description": "How much damage the player took",
+                "examples": [ 4, 10, 0, 30 ]
+            },
+            "enemies": {
+                "type": "string",
+                "title": "Enemy Encounter Name",
+                "examples": [ "Jaw Worm", "Cultist", "2 Louse", "Looter", "Gremlin Nob", "Gremlin Gang", "3 Louse", "Slime Boss" ]
+            },
+            "floor": {
+                "type": "integer",
+                "title": "Floor of Encounter",
+                "description": "Which floor the fight occured on",
+                "examples": [ 1, 2, 5, 7, 10, 11, 13, 14, 16 ]
+            },
+            "turns": {
+                "type": "integer",
+                "title": "Battle Turns",
+                "description": "How many turns the fight lasted",
+                "examples": [ 3, 4, 5, 2, 7 ]
+            }
+        },
+        "examples": [
+            { "damage": 4, "enemies": "Jaw Worm", "floor": 1, "turns": 3 },
+            { "damage": 10, "enemies": "Cultist", "floor": 2, "turns": 4 },
+            { "damage": 0, "enemies": "2 Louse", "floor": 5, "turns": 3 },
+            { "damage": 9, "enemies": "Looter", "floor": 7, "turns": 4 },
+            { "damage": 30, "enemies": "Gremlin Nob", "floor": 10, "turns": 5 },
+            { "damage": 0, "enemies": "Gremlin Gang", "floor": 11, "turns": 2 },
+            { "damage": 0, "enemies": "3 Louse", "floor": 13, "turns": 3 },
+            { "damage": 0, "enemies": "Looter", "floor": 14, "turns": 2 },
+            { "damage": 34, "enemies": "Slime Boss", "floor": 16, "turns": 7 }
+        ]
+        },
+        "PotionObtained": {
+        "type": "object",
+        "title": "Potion Obtained",
+        "description": "When a potion was obtained",
+        "required": [
+            "floor",
+            "key"
+        ],
+        "properties": {
+            "floor": { "type": "integer" },
+            "key": { "type": "string", "description": "Potion ID" }
+        },
+        "examples": [
+            { "floor": 1, "key": "Swift Potion" },
+            { "floor": 4, "key": "Dexterity Potion" },
+            { "floor": 4, "key": "EntropicBrew" },
+            { "floor": 10, "key": "Fruit Juice" },
+            { "floor": 11, "key": "EntropicBrew" },
+            { "floor": 16, "key": "Dexterity Potion" }
+        ]
+        },
+        "FloorPath": {
+        "anyOf": [
+            {
+            "type": "string",
+            "examples": [ "M", "$", "?", "R", "T", "E", "B" ]
+            },
+            {
+            "type": "null"
+            }
+        ]
+        },
+        "RelicObtain": {
+            "type": "object",
+            "title": "Relic Obtain event",
+            "required": [
+                "floor",
+                "key"
+            ],
+            "properties": {
+                "floor": {
+                    "type": "integer",
+                    "title": "The floor Schema"
+                },
+                "key": {
+                    "type": "string",
+                    "title": "The key Schema"
+                }
+            },
+            "examples": [
+                { "floor": 9, "key": "StoneCalendar" },
+                { "floor": 10, "key": "Peace Pipe" }
+            ]
+        },
+        "EventChoice": {
+            "type": "object",
+            "title": "Event Choice",
+            "required": [
+                "damage_healed",
+                "gold_gain",
+                "player_choice",
+                "damage_taken",
+                "max_hp_gain",
+                "max_hp_loss",
+                "event_name",
+                "floor",
+                "gold_loss",
+                "relics_obtained"
+            ],
+            "properties": {
+                "damage_healed": { "type": "integer", "description": "HP gained" },
+                "gold_gain": { "type": "integer", "title": "Gold gained" },
+                "player_choice": { "type": "string", "title": "ID/key of player's choice" },
+                "damage_taken": { "type": "integer", "title": "The damage_taken Schema" },
+                "max_hp_gain": { "type": "integer", "title": "The max_hp_gain Schema" },
+                "max_hp_loss": { "type": "integer", "title": "The max_hp_loss Schema" },
+                "event_name": {
+                    "type": "string",
+                    "title": "The event ID",
+                    "examples": [ "Lab", "WeMeetAgain" ]
+                },
+                "floor": { "type": "integer", "description": "Floor event occured on" },
+                "gold_loss": { "type": "integer", "title": "The gold_loss Schema" },
+                "relics_obtained": {
+                    "type": "array",
+                    "default": [],
+                    "title": "The relics_obtained Schema",
+                    "items": { "type": "string" }
+                }
+            },
+            "examples": [
+                { "damage_healed": 0, "gold_gain": 0, "player_choice": "Got Potions", "damage_taken": 0, "max_hp_gain": 0, "max_hp_loss": 0, "event_name": "Lab", "floor": 4, "gold_loss": 0 },
+                { "damage_healed": 0, "gold_gain": 0, "player_choice": "Gave Potion", "damage_taken": 0, "relics_obtained": [ "Anchor" ], "max_hp_gain": 0, "max_hp_loss": 0, "event_name": "WeMeetAgain", "floor": 12, "gold_loss": 0 }
+            ]
+        }
+    }
+}
