@@ -78,13 +78,17 @@ INSERT INTO CardChoices (run_id, floor, not_picked, picked)
     VALUES ($1, $2, (SELECT add_str_many(@not_picked::text[])), (SELECT add_str(@picked)))
     RETURNING CardChoices.id;
 
--- name: AddRelics :exec
+-- name: AddRelicObtain :exec
 INSERT INTO RelicObtains (run_id, floor, "key")
-    VALUES ($1, (SELECT unnset(@floors::int[])), (SELECT add_str_many(@keys::text[])));
+    VALUES ($1, $2, (SELECT add_str(@ckey::text)));
+
+-- name: AddPotionObtain :exec
+INSERT INTO PotionObtains (run_id, floor, "key")
+    VALUES ($1, $2, (SELECT add_str(@ckey::text)));
 
 -- name: GetCampfires :many
 SELECT CC.id, CC.cdata, CC.floor, StrCache.str as "key" FROM CampfireChoice AS CC
     LEFT JOIN StrCache ON CC.key = StrCache.id
     WHERE CC.id = $1
-    ORDER BY floor ASC;
+    ORDER BY floor;
 

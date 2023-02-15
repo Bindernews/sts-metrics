@@ -47,7 +47,7 @@ type Potionobtain struct {
 
 type Relicobtain struct {
 	ID    int32
-	RunID sql.NullInt32
+	RunID int32
 	Floor int32
 	Key   sql.NullInt32
 }

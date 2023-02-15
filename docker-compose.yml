@@ -1,0 +1,14 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:15
+    volumes:
+    - db-data:/var/lib/postgresql/data
+    ports:
+    - "18592:5432"
+    environment:
+      POSTGRES_PASSWORD: "BadPassword1234"
+    shm_size: 256MB
+
+volumes:
+  db-data:

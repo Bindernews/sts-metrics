@@ -85,19 +85,35 @@ func (q *Queries) AddDamageTaken(ctx context.Context, arg AddDamageTakenParams) 
 	return id, err
 }
 
-const addRelics = `-- name: AddRelics :exec
-INSERT INTO RelicObtains (run_id, floor, "key")
-    VALUES ($1, (SELECT unnset($2::int[])), (SELECT add_str_many($3::text[])))
+const addPotionObtain = `-- name: AddPotionObtain :exec
+INSERT INTO PotionObtains (run_id, floor, "key")
+    VALUES ($1, $2, (SELECT add_str($3::text)))
 `
 
-type AddRelicsParams struct {
-	RunID  sql.NullInt32
-	Floors []int32
-	Keys   []string
+type AddPotionObtainParams struct {
+	RunID int32
+	Floor int32
+	Ckey  string
 }
 
-func (q *Queries) AddRelics(ctx context.Context, arg AddRelicsParams) error {
-	_, err := q.db.Exec(ctx, addRelics, arg.RunID, arg.Floors, arg.Keys)
+func (q *Queries) AddPotionObtain(ctx context.Context, arg AddPotionObtainParams) error {
+	_, err := q.db.Exec(ctx, addPotionObtain, arg.RunID, arg.Floor, arg.Ckey)
+	return err
+}
+
+const addRelicObtain = `-- name: AddRelicObtain :exec
+INSERT INTO RelicObtains (run_id, floor, "key")
+    VALUES ($1, $2, (SELECT add_str($3::text)))
+`
+
+type AddRelicObtainParams struct {
+	RunID int32
+	Floor int32
+	Ckey  string
+}
+
+func (q *Queries) AddRelicObtain(ctx context.Context, arg AddRelicObtainParams) error {
+	_, err := q.db.Exec(ctx, addRelicObtain, arg.RunID, arg.Floor, arg.Ckey)
 	return err
 }
 
@@ -261,7 +277,7 @@ const getCampfires = `-- name: GetCampfires :many
 SELECT CC.id, CC.cdata, CC.floor, StrCache.str as "key" FROM CampfireChoice AS CC
     LEFT JOIN StrCache ON CC.key = StrCache.id
     WHERE CC.id = $1
-    ORDER BY floor ASC
+    ORDER BY floor
 `
 
 type GetCampfiresRow struct {

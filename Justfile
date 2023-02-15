@@ -15,3 +15,5 @@ sqlc CMD:
 sqlc-gen:
     docker run --rm -v "{{cwd}}:/src" -w /src kjconroy/sqlc -f /src/sql/sqlc.yaml generate
     
+serve:
+    go run cmd/stsms/main.go
