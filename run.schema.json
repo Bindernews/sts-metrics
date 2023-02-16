@@ -1011,15 +1011,8 @@
         ]
         },
         "FloorPath": {
-        "anyOf": [
-            {
-            "type": "string",
+            "type": ["string", "null"],
             "examples": [ "M", "$", "?", "R", "T", "E", "B" ]
-            },
-            {
-            "type": "null"
-            }
-        ]
         },
         "RelicObtain": {
             "type": "object",

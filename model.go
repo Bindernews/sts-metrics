@@ -17,6 +17,30 @@ type CampfireChoice struct {
 	Key string `json:"key" yaml:"key"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *CampfireChoice) UnmarshalJSON(b []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if v, ok := raw["data"]; !ok || v == nil {
+		return fmt.Errorf("field data in CampfireChoice: required")
+	}
+	if v, ok := raw["floor"]; !ok || v == nil {
+		return fmt.Errorf("field floor in CampfireChoice: required")
+	}
+	if v, ok := raw["key"]; !ok || v == nil {
+		return fmt.Errorf("field key in CampfireChoice: required")
+	}
+	type Plain CampfireChoice
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	*j = CampfireChoice(plain)
+	return nil
+}
+
 // One card choice
 type CardChoice struct {
 	// Floor corresponds to the JSON schema field "floor".
@@ -27,6 +51,30 @@ type CardChoice struct {
 
 	// Picked corresponds to the JSON schema field "picked".
 	Picked string `json:"picked" yaml:"picked"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *CardChoice) UnmarshalJSON(b []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if v, ok := raw["floor"]; !ok || v == nil {
+		return fmt.Errorf("field floor in CardChoice: required")
+	}
+	if v, ok := raw["not_picked"]; !ok || v == nil {
+		return fmt.Errorf("field not_picked in CardChoice: required")
+	}
+	if v, ok := raw["picked"]; !ok || v == nil {
+		return fmt.Errorf("field picked in CardChoice: required")
+	}
+	type Plain CardChoice
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	*j = CardChoice(plain)
+	return nil
 }
 
 type DamageTaken struct {
@@ -41,6 +89,33 @@ type DamageTaken struct {
 
 	// How many turns the fight lasted
 	Turns int `json:"turns" yaml:"turns"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *DamageTaken) UnmarshalJSON(b []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if v, ok := raw["damage"]; !ok || v == nil {
+		return fmt.Errorf("field damage in DamageTaken: required")
+	}
+	if v, ok := raw["enemies"]; !ok || v == nil {
+		return fmt.Errorf("field enemies in DamageTaken: required")
+	}
+	if v, ok := raw["floor"]; !ok || v == nil {
+		return fmt.Errorf("field floor in DamageTaken: required")
+	}
+	if v, ok := raw["turns"]; !ok || v == nil {
+		return fmt.Errorf("field turns in DamageTaken: required")
+	}
+	type Plain DamageTaken
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	*j = DamageTaken(plain)
+	return nil
 }
 
 type EventChoice struct {
@@ -73,25 +148,6 @@ type EventChoice struct {
 
 	// RelicsObtained corresponds to the JSON schema field "relics_obtained".
 	RelicsObtained []string `json:"relics_obtained" yaml:"relics_obtained"`
-}
-
-type FloorPath interface{}
-
-// When a potion was obtained
-type PotionObtained struct {
-	// Floor corresponds to the JSON schema field "floor".
-	Floor int `json:"floor" yaml:"floor"`
-
-	// Potion ID
-	Key string `json:"key" yaml:"key"`
-}
-
-type RelicObtain struct {
-	// Floor corresponds to the JSON schema field "floor".
-	Floor int `json:"floor" yaml:"floor"`
-
-	// Key corresponds to the JSON schema field "key".
-	Key string `json:"key" yaml:"key"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -139,52 +195,15 @@ func (j *EventChoice) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *CampfireChoice) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if v, ok := raw["data"]; !ok || v == nil {
-		return fmt.Errorf("field data in CampfireChoice: required")
-	}
-	if v, ok := raw["floor"]; !ok || v == nil {
-		return fmt.Errorf("field floor in CampfireChoice: required")
-	}
-	if v, ok := raw["key"]; !ok || v == nil {
-		return fmt.Errorf("field key in CampfireChoice: required")
-	}
-	type Plain CampfireChoice
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = CampfireChoice(plain)
-	return nil
-}
+type FloorPath *string
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *CardChoice) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if v, ok := raw["floor"]; !ok || v == nil {
-		return fmt.Errorf("field floor in CardChoice: required")
-	}
-	if v, ok := raw["not_picked"]; !ok || v == nil {
-		return fmt.Errorf("field not_picked in CardChoice: required")
-	}
-	if v, ok := raw["picked"]; !ok || v == nil {
-		return fmt.Errorf("field picked in CardChoice: required")
-	}
-	type Plain CardChoice
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = CardChoice(plain)
-	return nil
+// When a potion was obtained
+type PotionObtained struct {
+	// Floor corresponds to the JSON schema field "floor".
+	Floor int `json:"floor" yaml:"floor"`
+
+	// Potion ID
+	Key string `json:"key" yaml:"key"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -208,31 +227,12 @@ func (j *PotionObtained) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *DamageTaken) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if v, ok := raw["damage"]; !ok || v == nil {
-		return fmt.Errorf("field damage in DamageTaken: required")
-	}
-	if v, ok := raw["enemies"]; !ok || v == nil {
-		return fmt.Errorf("field enemies in DamageTaken: required")
-	}
-	if v, ok := raw["floor"]; !ok || v == nil {
-		return fmt.Errorf("field floor in DamageTaken: required")
-	}
-	if v, ok := raw["turns"]; !ok || v == nil {
-		return fmt.Errorf("field turns in DamageTaken: required")
-	}
-	type Plain DamageTaken
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = DamageTaken(plain)
-	return nil
+type RelicObtain struct {
+	// Floor corresponds to the JSON schema field "floor".
+	Floor int `json:"floor" yaml:"floor"`
+
+	// Key corresponds to the JSON schema field "key".
+	Key string `json:"key" yaml:"key"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -383,7 +383,7 @@ type RunSchemaJson struct {
 	NeowCost string `json:"neow_cost" yaml:"neow_cost"`
 
 	// PathPerFloor corresponds to the JSON schema field "path_per_floor".
-	PathPerFloor []RunSchemaJsonPathPerFloorElem `json:"path_per_floor" yaml:"path_per_floor"`
+	PathPerFloor []FloorPath `json:"path_per_floor" yaml:"path_per_floor"`
 
 	// Path the player took
 	PathTaken []string `json:"path_taken" yaml:"path_taken"`
@@ -435,8 +435,6 @@ type RunSchemaJson struct {
 	// WinRate corresponds to the JSON schema field "win_rate".
 	WinRate int `json:"win_rate" yaml:"win_rate"`
 }
-
-type RunSchemaJsonPathPerFloorElem interface{}
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *RunSchemaJson) UnmarshalJSON(b []byte) error {

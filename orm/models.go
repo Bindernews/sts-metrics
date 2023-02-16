@@ -10,6 +10,7 @@ import (
 
 type Bossrelic struct {
 	ID        int32
+	RunID     int32
 	NotPicked []int32
 	Picked    int32
 }
@@ -52,7 +53,7 @@ type Relicobtain struct {
 	Key   sql.NullInt32
 }
 
-type Run struct {
+type Runsdatum struct {
 	ID                   int32
 	AscensionLevel       int32
 	BuildVersion         int32
@@ -62,8 +63,8 @@ type Run struct {
 	ChooseSeed           bool
 	CircletCount         sql.NullInt32
 	CurrentHpPerFloor    []int32
-	FloorReached         sql.NullInt32
-	Gold                 sql.NullInt32
+	FloorReached         int32
+	Gold                 int32
 	GoldPerFloor         []int32
 	IsBeta               bool
 	IsDaily              bool
@@ -79,24 +80,29 @@ type Run struct {
 	MaxHpPerFloor        []int32
 	NeowBonus            string
 	NeowCost             string
+	PathPerFloor         string
+	PathTaken            string
 	PlayID               string
-	PlayerExperience     sql.NullInt32
+	PlayerExperience     int32
 	Playtime             int32
 	PotionsFloorSpawned  []int32
 	PotionsFloorUsage    []int32
 	PurchasedPurges      int32
-	Score                sql.NullInt32
+	Score                int32
 	SeedPlayed           string
 	SeedSourceTimestamp  sql.NullInt32
-	Ctimestamp           sql.NullTime
-	Victory              sql.NullBool
-	WinRate              sql.NullInt32
+	Timestamp            sql.NullTime
+	Victory              bool
+	WinRate              int32
 }
 
-type Runstobossrelic struct {
-	RunID   int32
-	RelicID int32
-	Aindex  sql.NullInt32
+type Runstext struct {
+	ID                  int32
+	BuildVersion        string
+	CharacterChosen     string
+	ItemsPurchasedNames []string
+	ItemsPurgedNames    []string
+	KilledBy            string
 }
 
 type Strcache struct {

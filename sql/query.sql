@@ -1,67 +1,62 @@
 -- name: GetRun :one
-SELECT * FROM Runs WHERE id = $1 LIMIT 1;
+SELECT * FROM RunsData WHERE id = $1 LIMIT 1;
 
--- name: AddStr :one
-SELECT add_str($1);
-
--- name: AddRun :one
-WITH
-    build_version AS (SELECT add_str($2)),
-    character_chosen AS (SELECT add_str($5)),
-    items_purchased AS (SELECT add_str_many($18::text[])),
-    items_purged AS (SELECT add_str_many($20::text[])),
-    killed_by_id AS (SELECT add_str($21))
-INSERT INTO Runs (
+-- name: AddRunRaw :one
+INSERT INTO RunsData (
     ascension_level,
-    build_version,
     campfire_rested,
     campfire_upgraded,
-    character_chosen,
     choose_seed,
     circlet_count,
     current_hp_per_floor,
     floor_reached,
     gold,
     gold_per_floor,
-    is_beta,
+    is_beta, -- 10
     is_daily,
     is_endless,
     is_prod,
     is_trial,
     items_purchased_floors,
-    items_purchased_ids,
     items_purged_floors,
-    items_purged_ids,
-    killed_by,
     local_time,
     max_hp_per_floor,
     neow_bonus,
-    neow_cost, -- 25
-    -- TODO path per floor,
-    -- TODO path taken,
+    neow_cost, -- 20
+    path_per_floor,
+    path_taken,
     play_id,
     player_experience,
     playtime,
     potions_floor_spawned,
-    potions_floor_usage, -- 30
+    potions_floor_usage,
     purchased_purges,
     score,
-    seed_played,
+    seed_played, -- 30
     seed_source_timestamp,
-    ctimestamp, -- 35
+    "timestamp",
     victory,
-    win_rate
+    win_rate,
+    -- Default null/invalid values
+    build_version, character_chosen
 ) VALUES (
-    $1, build_version, $3, $4, character_chosen,
-    $6, $7, $8, $9, $10,
-    $11, $12, $13, $14, $15,
-    $16, $17, items_purchased, $19, items_purged,
-    killed_by_id, $22, $23, $24, $25,
-    $26, $27, $28, $29, $30,
-    $31, $32, $33, $34, $35,
-    $36, $37
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+    $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+    $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
+    $31, $32, $33, $34,
+    -- Default values
+    1, 1
 )
-RETURNING Runs.id;
+RETURNING RunsData.id;
+
+-- name: SetRunText :exec
+UPDATE RunsText SET
+    build_version = $2,
+    character_chosen = $3,
+    items_purchased_names = $4,
+    items_purged_names = $5
+WHERE
+    id = $1;
 
 -- name: AddCampfire :one
 INSERT INTO CampfireChoice (run_id, cdata, floor, "key")

@@ -1,4 +1,5 @@
 set windows-shell := ["powershell"]
+set dotenv-load
 
 cwd := justfile_directory()
 
@@ -6,7 +7,7 @@ make-model:
     gojsonschema -p stms -o model.go run.schema.json
 
 install-gojsonschema:
-    git clone https://https://github.com/omissis/go-jsonschema
+    git clone https://github.com/omissis/go-jsonschema
     cd go-jsonschema
     go install cmd/gojsonschema
 
@@ -17,3 +18,6 @@ sqlc-gen:
     
 serve:
     go run cmd/stsms/main.go
+
+migrate DEST:
+    cd sql; tern migrate -d {{DEST}}

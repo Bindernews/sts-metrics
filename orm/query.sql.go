@@ -117,77 +117,64 @@ func (q *Queries) AddRelicObtain(ctx context.Context, arg AddRelicObtainParams) 
 	return err
 }
 
-const addRun = `-- name: AddRun :one
-WITH
-    build_version AS (SELECT add_str($2)),
-    character_chosen AS (SELECT add_str($5)),
-    items_purchased AS (SELECT add_str_many($18::text[])),
-    items_purged AS (SELECT add_str_many($20::text[])),
-    killed_by_id AS (SELECT add_str($21))
-INSERT INTO Runs (
+const addRunRaw = `-- name: AddRunRaw :one
+INSERT INTO RunsData (
     ascension_level,
-    build_version,
     campfire_rested,
     campfire_upgraded,
-    character_chosen,
     choose_seed,
     circlet_count,
     current_hp_per_floor,
     floor_reached,
     gold,
     gold_per_floor,
-    is_beta,
+    is_beta, -- 10
     is_daily,
     is_endless,
     is_prod,
     is_trial,
     items_purchased_floors,
-    items_purchased_ids,
     items_purged_floors,
-    items_purged_ids,
-    killed_by,
     local_time,
     max_hp_per_floor,
     neow_bonus,
-    neow_cost, -- 25
-    -- TODO path per floor,
-    -- TODO path taken,
+    neow_cost, -- 20
+    path_per_floor,
+    path_taken,
     play_id,
     player_experience,
     playtime,
     potions_floor_spawned,
-    potions_floor_usage, -- 30
+    potions_floor_usage,
     purchased_purges,
     score,
-    seed_played,
+    seed_played, -- 30
     seed_source_timestamp,
-    ctimestamp, -- 35
+    "timestamp",
     victory,
-    win_rate
+    win_rate,
+    -- Default null/invalid values
+    build_version, character_chosen
 ) VALUES (
-    $1, build_version, $3, $4, character_chosen,
-    $6, $7, $8, $9, $10,
-    $11, $12, $13, $14, $15,
-    $16, $17, items_purchased, $19, items_purged,
-    killed_by_id, $22, $23, $24, $25,
-    $26, $27, $28, $29, $30,
-    $31, $32, $33, $34, $35,
-    $36, $37
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+    $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+    $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
+    $31, $32, $33, $34,
+    -- Default values
+    1, 1
 )
-RETURNING Runs.id
+RETURNING RunsData.id
 `
 
-type AddRunParams struct {
+type AddRunRawParams struct {
 	AscensionLevel       int32
-	S                    string
 	CampfireRested       sql.NullInt32
 	CampfireUpgraded     sql.NullInt32
-	S_2                  string
 	ChooseSeed           bool
 	CircletCount         sql.NullInt32
 	CurrentHpPerFloor    []int32
-	FloorReached         sql.NullInt32
-	Gold                 sql.NullInt32
+	FloorReached         int32
+	Gold                 int32
 	GoldPerFloor         []int32
 	IsBeta               bool
 	IsDaily              bool
@@ -195,35 +182,32 @@ type AddRunParams struct {
 	IsProd               bool
 	IsTrial              bool
 	ItemsPurchasedFloors []int32
-	Column18             []string
 	ItemsPurgedFloors    []int32
-	Column20             []string
-	S_3                  string
 	LocalTime            string
 	MaxHpPerFloor        []int32
 	NeowBonus            string
 	NeowCost             string
+	PathPerFloor         string
+	PathTaken            string
 	PlayID               string
-	PlayerExperience     sql.NullInt32
+	PlayerExperience     int32
 	Playtime             int32
 	PotionsFloorSpawned  []int32
 	PotionsFloorUsage    []int32
 	PurchasedPurges      int32
-	Score                sql.NullInt32
+	Score                int32
 	SeedPlayed           string
 	SeedSourceTimestamp  sql.NullInt32
-	Ctimestamp           sql.NullTime
-	Victory              sql.NullBool
-	WinRate              sql.NullInt32
+	Timestamp            sql.NullTime
+	Victory              bool
+	WinRate              int32
 }
 
-func (q *Queries) AddRun(ctx context.Context, arg AddRunParams) (int32, error) {
-	row := q.db.QueryRow(ctx, addRun,
+func (q *Queries) AddRunRaw(ctx context.Context, arg AddRunRawParams) (int32, error) {
+	row := q.db.QueryRow(ctx, addRunRaw,
 		arg.AscensionLevel,
-		arg.S,
 		arg.CampfireRested,
 		arg.CampfireUpgraded,
-		arg.S_2,
 		arg.ChooseSeed,
 		arg.CircletCount,
 		arg.CurrentHpPerFloor,
@@ -236,14 +220,13 @@ func (q *Queries) AddRun(ctx context.Context, arg AddRunParams) (int32, error) {
 		arg.IsProd,
 		arg.IsTrial,
 		arg.ItemsPurchasedFloors,
-		arg.Column18,
 		arg.ItemsPurgedFloors,
-		arg.Column20,
-		arg.S_3,
 		arg.LocalTime,
 		arg.MaxHpPerFloor,
 		arg.NeowBonus,
 		arg.NeowCost,
+		arg.PathPerFloor,
+		arg.PathTaken,
 		arg.PlayID,
 		arg.PlayerExperience,
 		arg.Playtime,
@@ -253,24 +236,13 @@ func (q *Queries) AddRun(ctx context.Context, arg AddRunParams) (int32, error) {
 		arg.Score,
 		arg.SeedPlayed,
 		arg.SeedSourceTimestamp,
-		arg.Ctimestamp,
+		arg.Timestamp,
 		arg.Victory,
 		arg.WinRate,
 	)
 	var id int32
 	err := row.Scan(&id)
 	return id, err
-}
-
-const addStr = `-- name: AddStr :one
-SELECT add_str($1)
-`
-
-func (q *Queries) AddStr(ctx context.Context, s string) (int32, error) {
-	row := q.db.QueryRow(ctx, addStr, s)
-	var add_str int32
-	err := row.Scan(&add_str)
-	return add_str, err
 }
 
 const getCampfires = `-- name: GetCampfires :many
@@ -313,12 +285,12 @@ func (q *Queries) GetCampfires(ctx context.Context, id int32) ([]GetCampfiresRow
 }
 
 const getRun = `-- name: GetRun :one
-SELECT id, ascension_level, build_version, campfire_rested, campfire_upgraded, character_chosen, choose_seed, circlet_count, current_hp_per_floor, floor_reached, gold, gold_per_floor, is_beta, is_daily, is_endless, is_prod, is_trial, items_purchased_floors, items_purchased_ids, items_purged_floors, items_purged_ids, killed_by, local_time, max_hp_per_floor, neow_bonus, neow_cost, play_id, player_experience, playtime, potions_floor_spawned, potions_floor_usage, purchased_purges, score, seed_played, seed_source_timestamp, ctimestamp, victory, win_rate FROM Runs WHERE id = $1 LIMIT 1
+SELECT id, ascension_level, build_version, campfire_rested, campfire_upgraded, character_chosen, choose_seed, circlet_count, current_hp_per_floor, floor_reached, gold, gold_per_floor, is_beta, is_daily, is_endless, is_prod, is_trial, items_purchased_floors, items_purchased_ids, items_purged_floors, items_purged_ids, killed_by, local_time, max_hp_per_floor, neow_bonus, neow_cost, path_per_floor, path_taken, play_id, player_experience, playtime, potions_floor_spawned, potions_floor_usage, purchased_purges, score, seed_played, seed_source_timestamp, timestamp, victory, win_rate FROM RunsData WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetRun(ctx context.Context, id int32) (Run, error) {
+func (q *Queries) GetRun(ctx context.Context, id int32) (Runsdatum, error) {
 	row := q.db.QueryRow(ctx, getRun, id)
-	var i Run
+	var i Runsdatum
 	err := row.Scan(
 		&i.ID,
 		&i.AscensionLevel,
@@ -346,6 +318,8 @@ func (q *Queries) GetRun(ctx context.Context, id int32) (Run, error) {
 		&i.MaxHpPerFloor,
 		&i.NeowBonus,
 		&i.NeowCost,
+		&i.PathPerFloor,
+		&i.PathTaken,
 		&i.PlayID,
 		&i.PlayerExperience,
 		&i.Playtime,
@@ -355,9 +329,38 @@ func (q *Queries) GetRun(ctx context.Context, id int32) (Run, error) {
 		&i.Score,
 		&i.SeedPlayed,
 		&i.SeedSourceTimestamp,
-		&i.Ctimestamp,
+		&i.Timestamp,
 		&i.Victory,
 		&i.WinRate,
 	)
 	return i, err
+}
+
+const setRunText = `-- name: SetRunText :exec
+UPDATE RunsText SET
+    build_version = $2,
+    character_chosen = $3,
+    items_purchased_names = $4,
+    items_purged_names = $5
+WHERE
+    id = $1
+`
+
+type SetRunTextParams struct {
+	ID                  int32
+	BuildVersion        string
+	CharacterChosen     string
+	ItemsPurchasedNames []string
+	ItemsPurgedNames    []string
+}
+
+func (q *Queries) SetRunText(ctx context.Context, arg SetRunTextParams) error {
+	_, err := q.db.Exec(ctx, setRunText,
+		arg.ID,
+		arg.BuildVersion,
+		arg.CharacterChosen,
+		arg.ItemsPurchasedNames,
+		arg.ItemsPurgedNames,
+	)
+	return err
 }

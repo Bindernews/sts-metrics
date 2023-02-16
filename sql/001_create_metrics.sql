@@ -7,7 +7,34 @@ CREATE TABLE StrCache
 );
 CREATE INDEX ON StrCache USING HASH(str);
 
-CREATE TABLE Runs (
+CREATE FUNCTION add_str(s TEXT) RETURNS INT
+LANGUAGE SQL AS $$
+    INSERT INTO StrCache(str) VALUES (s)
+    ON CONFLICT (str) DO NOTHING
+    RETURNING (SELECT id FROM StrCache WHERE str = s);
+$$;
+
+CREATE OR REPLACE FUNCTION add_str_many(s TEXT[]) RETURNS TABLE(id INT)
+LANGUAGE SQL AS $$
+    WITH
+        elems(e) AS (SELECT unnest(s))
+    INSERT INTO StrCache(str) SELECT * FROM elems
+    ON CONFLICT (str) DO NOTHING
+    RETURNING (SELECT id FROM StrCache LEFT JOIN elems ON str = e);
+$$;
+
+CREATE OR REPLACE FUNCTION get_str(i INT) RETURNS TEXT
+LANGUAGE SQL AS $$
+    SELECT str FROM StrCache WHERE id = i;
+$$;
+
+CREATE OR REPLACE FUNCTION get_str_many(ids INT[]) RETURNS TEXT[]
+LANGUAGE SQL AS $$
+    SELECT ARRAY(SELECT str FROM StrCache WHERE id = ANY(ids));
+$$;
+
+CREATE TABLE RunsData
+(
     id SERIAL PRIMARY KEY,
     ascension_level INT NOT NULL,
     /* REVERSE boss relics */
@@ -22,8 +49,8 @@ CREATE TABLE Runs (
     current_hp_per_floor INT ARRAY,
     /* REVERSE damage taken */
     -- EventChoices []RunSchemaJsonEventChoicesElem `json:"event_choices" yaml:"event_choices"`
-    floor_reached INT,
-    gold INT,
+    floor_reached INT NOT NULL ,
+    gold INT NOT NULL ,
     gold_per_floor INT ARRAY,
     /* is ascention mode? if not, ascention_level will be 0 */
     is_beta BOOLEAN NOT NULL,
@@ -48,17 +75,14 @@ CREATE TABLE Runs (
     neow_bonus TEXT NOT NULL,
     -- TODO
     neow_cost TEXT NOT NULL,
-    /*
-    // PathPerFloor corresponds to the JSON schema field "path_per_floor".
-    PathPerFloor []RunSchemaJsonPathPerFloorElem `json:"path_per_floor" yaml:"path_per_floor"`
-
-    // PathTaken corresponds to the JSON schema field "path_taken".
-    PathTaken []string `json:"path_taken" yaml:"path_taken"`
-    */
+    -- Path per floor as a single string
+    path_per_floor TEXT NOT NULL,
+    -- Path taken, stored as single string of characters
+    path_taken TEXT NOT NULL,
     -- UUID for this run (UUID)
     play_id TEXT NOT NULL,
     -- XP gained at the end of the run
-    player_experience INT,
+    player_experience INT NOT NULL ,
     -- Play time in seconds
     playtime INT NOT NULL,
     -- TODO Doc
@@ -70,23 +94,52 @@ CREATE TABLE Runs (
     purchased_purges INT NOT NULL,
     /* REVERSE RelicObtains */
     -- Player's score at the end of the run
-    score INT,
+    score INT NOT NULL ,
     -- The run seed
     seed_played TEXT NOT NULL,
     -- TODO doc
     seed_source_timestamp INT,
     -- Timestamp corresponds to the JSON schema field "timestamp".
-    ctimestamp TIMESTAMP,
+    "timestamp" TIMESTAMP,
     -- Victory corresponds to the JSON schema field "victory".
-    victory BOOLEAN,
+    victory BOOLEAN NOT NULL,
     -- WinRate corresponds to the JSON schema field "win_rate".
-    win_rate INT
+    win_rate INT NOT NULL
 );
+
+CREATE OR REPLACE VIEW RunsText AS (
+    SELECT
+        R.id,
+        (SELECT get_str(R.build_version))::text as build_version,
+        (SELECT get_str(R.character_chosen))::text as character_chosen,
+        (SELECT get_str_many(R.items_purchased_ids))::text[] as items_purchased_names,
+        (SELECT get_str_many(R.items_purged_ids))::text[] as items_purged_names,
+        (SELECT get_str(R.killed_by))::text as killed_by
+    FROM RunsData AS R
+);
+
+CREATE OR REPLACE FUNCTION runstext_update() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE RunsData SET
+        build_version = (SELECT add_str(NEW.build_version)),
+        character_chosen = (SELECT add_str(NEW.character_chosen)),
+        items_purchased_ids = (SELECT add_str_many(NEW.items_purchased_names)),
+        items_purged_ids = (SELECT add_str_many(NEW.items_purged_names)),
+        killed_by = (SELECT add_str(NEW.killed_by))
+    WHERE
+        RunsData.id = NEW.id;
+    RETURN NEW;
+END $$;
+
+CREATE TRIGGER runstext_update_trg INSTEAD OF UPDATE ON RunsText
+    FOR EACH ROW EXECUTE FUNCTION runstext_update();
+
 
 CREATE TABLE CampfireChoice
 (
     id SERIAL PRIMARY KEY,
-    run_id INT NOT NULL REFERENCES Runs(id),
+    run_id INT NOT NULL REFERENCES RunsData(id),
     cdata TEXT,
     floor INT NOT NULL,
     "key" INT NOT NULL REFERENCES StrCache(id)
@@ -95,7 +148,7 @@ CREATE TABLE CampfireChoice
 CREATE TABLE DamageTaken
 (
     id SERIAL PRIMARY KEY,
-    run_id INT NOT NULL REFERENCES Runs(id),
+    run_id INT NOT NULL REFERENCES RunsData(id),
     enemies INT NOT NULL REFERENCES StrCache(id),
     floor INT NOT NULL,
     turns INT NOT NULL
@@ -104,6 +157,7 @@ CREATE TABLE DamageTaken
 CREATE TABLE BossRelics
 (
     id SERIAL PRIMARY KEY,
+    run_id INT NOT NULL REFERENCES RunsData(id),
     not_picked INT ARRAY,
     picked INT NOT NULL REFERENCES StrCache(id)
 );
@@ -111,23 +165,16 @@ CREATE TABLE BossRelics
 CREATE TABLE CardChoices
 (
     id SERIAL PRIMARY KEY,
-    run_id INT NOT NULL REFERENCES Runs(id),
+    run_id INT NOT NULL REFERENCES RunsData(id),
     not_picked INT ARRAY,
     picked INT NOT NULL REFERENCES StrCache(id),
     floor INT NOT NULL
 );
 
-Create TABLE RunsToBossRelics
-(
-    run_id INT NOT NULL REFERENCES Runs(id),
-    relic_id INT NOT NULL REFERENCES BossRelics(id),
-    aindex INT
-);
-
 CREATE TABLE RelicObtains
 (
     id SERIAL PRIMARY KEY,
-    run_id INT NOT NULL REFERENCES Runs(id),
+    run_id INT NOT NULL REFERENCES RunsData(id),
     floor INT NOT NULL,
     "key" INT REFERENCES StrCache(id)
 );
@@ -135,38 +182,27 @@ CREATE TABLE RelicObtains
 CREATE TABLE PotionObtains
 (
     id SERIAL PRIMARY KEY,
-    run_id INT NOT NULL REFERENCES Runs(id),
+    run_id INT NOT NULL REFERENCES RunsData(id),
     floor INT NOT NULL,
     "key" INT NOT NULL REFERENCES StrCache(id)
 );
 
-
-CREATE FUNCTION add_str(s TEXT) RETURNS INT
-LANGUAGE SQL AS $$
-    INSERT INTO StrCache(str) VALUES (s)
-    ON CONFLICT (str) DO NOTHING
-    RETURNING (SELECT id FROM StrCache WHERE str = s);
-$$;
-
-CREATE OR REPLACE FUNCTION add_str_many(s TEXT[]) RETURNS TABLE(id INT)
-LANGUAGE SQL AS $$
-    WITH
-        elems(e) AS (SELECT unnest(s))
-    INSERT INTO StrCache(str) SELECT * FROM elems
-    ON CONFLICT (str) DO NOTHING
-    RETURNING (SELECT id FROM StrCache LEFT JOIN elems ON str = e);
-$$;
-
+-- Add empty string to cache
+INSERT INTO StrCache(id, str) VALUES (1, '') ON CONFLICT DO NOTHING;
 
 ---- create above / drop below ----
 
+drop trigger if exists runstext_update_trg ON RunsText;
+drop function if exists runstext_update;
+drop view if exists RunsText;
 drop table if exists BossRelics;
 drop table if exists CardChoices;
 drop table if exists DamageTaken;
 drop table if exists CampfireChoice;
 drop table if exists RelicObtains;
 drop table if exists PotionObtains;
-drop table if exists Runs;
+drop table if exists RunsData;
 drop table if exists StrCache;
-
-
+drop function if exists add_str;
+drop function if exists add_str_many;
+drop function if exists get_str;
