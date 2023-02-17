@@ -290,10 +290,10 @@
           "examples": [ 2 ]
       },
       "win_rate": {
-          "type": "integer",
+          "type": "number",
           "default": 0,
           "title": "The win_rate Schema",
-          "examples": [ 0 ]
+          "examples": [ 0, 0.3 ]
       },
       "timestamp": {
           "type": "integer",

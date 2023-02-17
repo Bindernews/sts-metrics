@@ -433,7 +433,7 @@ type RunSchemaJson struct {
 	Victory bool `json:"victory" yaml:"victory"`
 
 	// WinRate corresponds to the JSON schema field "win_rate".
-	WinRate int `json:"win_rate" yaml:"win_rate"`
+	WinRate float64 `json:"win_rate" yaml:"win_rate"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.

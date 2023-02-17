@@ -1,63 +1,92 @@
 package stms
 
 import (
-	"context"
-	"os"
+	"errors"
+
+	_ "golang.org/x/oauth2"
 
 	"github.com/bindernews/sts-msr/orm"
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-type StsMs struct {
-	Pool *pgxpool.Pool
+// Generic unauthorized error
+var ErrUnauthorized = errors.New("unauthorized")
+
+// Error for unknown chart id
+var ErrUnknownChart = errors.New("unknown chart")
+
+const (
+	// gin Context key for the user's email, set in
+	CtxEmail = "Email"
+)
+
+type MainController struct {
+	Srv *Services
 }
 
-func NewStsMs() (*StsMs, error) {
-	ctx := context.Background()
-	pool, err := pgxpool.Connect(ctx, os.Getenv("POSTGRES_CONN"))
-	if err != nil {
-		return nil, err
-	}
-	s := &StsMs{
-		Pool: pool,
-	}
-	return s, nil
+func (s *MainController) Init(r *gin.Engine) error {
+	r.Use(sessions.Sessions("main", s.Srv.SeStore))
+	r.LoadHTMLGlob("templates/*.html")
+
+	// Register main routes
+	r.RouterGroup.
+		POST("/upload", s.PostUpload).
+		GET("/pingdb", s.PingDB).
+		GET("/", s.Srv.CtxSetEmail(), s.GetIndex)
+
+	return nil
 }
 
-func (s *StsMs) Register(group *gin.RouterGroup) {
-	group.POST("/upload", s.PostUpload)
-	group.GET("/pingdb", s.PingDB)
+func (s *MainController) GetIndex(c *gin.Context) {
+	email := c.GetString(CtxEmail)
+	c.HTML(200, "index.html", gin.H{
+		"Email": email,
+	})
 }
 
-func (s *StsMs) PingDB(c *gin.Context) {
+func (s *MainController) PingDB(c *gin.Context) {
 	ctx := c.Request.Context()
-	if err := s.Pool.Ping(ctx); err != nil {
-		c.AbortWithStatusJSON(500, c.Error(err).JSON())
+	if err := s.Srv.Pool.Ping(ctx); err != nil {
+		AbortErr(c, 500, err)
 		return
 	}
-	c.JSON(200, gin.H{"message": "Success"})
+	c.JSON(200, gin.H{"message": "success"})
 }
 
-func (s *StsMs) PostUpload(c *gin.Context) {
+func (s *MainController) PostUpload(c *gin.Context) {
 	var runData RunSchemaJson
 	if err := c.BindJSON(&runData); err != nil {
-		abortBadReq(c, err)
+		AbortErr(c, 400, err)
 		return
 	}
 
 	ctx := c.Request.Context()
-	if err := s.Pool.BeginFunc(ctx, func(tx pgx.Tx) error {
+	if err := s.Srv.Pool.BeginFunc(ctx, func(tx pgx.Tx) error {
 		_, err := runData.AddToDb(ctx, orm.New(tx))
 		return err
 	}); err != nil {
-		abortBadReq(c, err)
+		c.Error(err)
+		c.AbortWithStatus(500)
 		return
 	}
 	c.JSON(200, gin.H{"message": "Thank you!"})
 }
 
-func abortBadReq(c *gin.Context, err error) {
-	c.AbortWithStatusJSON(400, c.Error(err).JSON())
+func AbortErr(c *gin.Context, code int, err error) {
+	c.AbortWithStatusJSON(code, c.Error(err).JSON())
+}
+
+// Returns the value of the session key, or an empty string if
+// the value doesn't exist, or is not a string.
+func sessGetString(s sessions.Session, key string) string {
+	val := s.Get(key)
+	if val == nil {
+		return ""
+	} else if val2, ok := val.(string); ok {
+		return val2
+	} else {
+		return ""
+	}
 }

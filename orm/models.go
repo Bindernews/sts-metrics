@@ -39,6 +39,18 @@ type Damagetaken struct {
 	Turns   int32
 }
 
+type Eventchoice struct {
+	ID                int32
+	RunID             int32
+	DamageDelta       int32
+	EventNameID       int32
+	Floor             int32
+	GoldDelta         int32
+	MaxHpDelta        int32
+	PlayerChoiceID    int32
+	RelicsObtainedIds []int32
+}
+
 type Potionobtain struct {
 	ID    int32
 	RunID int32
@@ -50,7 +62,7 @@ type Relicobtain struct {
 	ID    int32
 	RunID int32
 	Floor int32
-	Key   sql.NullInt32
+	Key   int32
 }
 
 type Runsdatum struct {
@@ -75,8 +87,9 @@ type Runsdatum struct {
 	ItemsPurchasedIds    []int32
 	ItemsPurgedFloors    []int32
 	ItemsPurgedIds       []int32
-	KilledBy             sql.NullInt32
+	KilledBy             int32
 	LocalTime            string
+	MasterDeck           []int32
 	MaxHpPerFloor        []int32
 	NeowBonus            string
 	NeowCost             string
@@ -105,7 +118,24 @@ type Runstext struct {
 	KilledBy            string
 }
 
+type Scope struct {
+	ID     int32
+	Key    string
+	Desc   string
+	Parent sql.NullInt32
+}
+
 type Strcache struct {
 	ID  int32
 	Str string
+}
+
+type User struct {
+	ID    int32
+	Email string
+}
+
+type UsersToScope struct {
+	UserID  int32
+	ScopeID int32
 }

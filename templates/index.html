@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<body>
+  {{ if .Email }}
+    <p>You are logged in as {{.Email}}</p>
+  {{ else }}
+    <p>You are not logged in</p>
+  {{ end }}
+  <ul>
+    <li><a href="/oauth/login?provider=github">Login with Github</a></li>
+    <li><a href="/oauth/logout">Logout</a></li>
+    <li><a href="/stats/overview?character=GRACKLE">Chart Overview - GRACKLE</a></li>
+  </ul>
+</body>
+</html>

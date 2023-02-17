@@ -1,26 +1,22 @@
 
 -- Deduplicate names in other tables
-CREATE TABLE StrCache
-(
+CREATE TABLE StrCache(
     id SERIAL PRIMARY KEY,
-    str TEXT NOT NULL
+    str TEXT NOT NULL,
+    UNIQUE (str)
 );
 CREATE INDEX ON StrCache USING HASH(str);
 
-CREATE FUNCTION add_str(s TEXT) RETURNS INT
+CREATE OR REPLACE FUNCTION add_str(s TEXT) RETURNS INT
 LANGUAGE SQL AS $$
-    INSERT INTO StrCache(str) VALUES (s)
-    ON CONFLICT (str) DO NOTHING
-    RETURNING (SELECT id FROM StrCache WHERE str = s);
+    INSERT INTO StrCache(str) VALUES (s) ON CONFLICT (str) DO NOTHING;
+    SELECT id FROM StrCache WHERE str = s;
 $$;
 
 CREATE OR REPLACE FUNCTION add_str_many(s TEXT[]) RETURNS TABLE(id INT)
 LANGUAGE SQL AS $$
-    WITH
-        elems(e) AS (SELECT unnest(s))
-    INSERT INTO StrCache(str) SELECT * FROM elems
-    ON CONFLICT (str) DO NOTHING
-    RETURNING (SELECT id FROM StrCache LEFT JOIN elems ON str = e);
+    INSERT INTO StrCache(str) SELECT unnest(s) ON CONFLICT (str) DO NOTHING;
+    SELECT id FROM StrCache WHERE str = ANY(s);
 $$;
 
 CREATE OR REPLACE FUNCTION get_str(i INT) RETURNS TEXT
@@ -38,12 +34,12 @@ CREATE TABLE RunsData
     id SERIAL PRIMARY KEY,
     ascension_level INT NOT NULL,
     /* REVERSE boss relics */
-    build_version INT NOT NULL REFERENCES StrCache(id),
+    build_version INT NOT NULL DEFAULT 1 REFERENCES StrCache(id),
     /* REVERSE campfire choices */
     campfire_rested INT,
     campfire_upgraded INT,
     /* REVERSE card choices */
-    character_chosen INT NOT NULL REFERENCES StrCache(id),
+    character_chosen INT NOT NULL DEFAULT 1 REFERENCES StrCache(id),
     choose_seed BOOLEAN NOT NULL,
     circlet_count INT,
     current_hp_per_floor INT ARRAY,
@@ -65,10 +61,10 @@ CREATE TABLE RunsData
     -- Card remove names
     items_purged_ids INT ARRAY,
     -- Encounter ID where player died
-    killed_by INT REFERENCES StrCache(id),
+    killed_by INT NOT NULL DEFAULT 1 REFERENCES StrCache(id),
     -- Local time in YYYYmmddHHMMSS format
     local_time TEXT NOT NULL,
-    /* REVERSE master deck */
+    master_deck INT ARRAY,
     -- Doctext
     max_hp_per_floor INT ARRAY,
     -- ID of player's Neow choice
@@ -104,7 +100,8 @@ CREATE TABLE RunsData
     -- Victory corresponds to the JSON schema field "victory".
     victory BOOLEAN NOT NULL,
     -- WinRate corresponds to the JSON schema field "win_rate".
-    win_rate INT NOT NULL
+    win_rate FLOAT NOT NULL,
+    UNIQUE (play_id)
 );
 
 CREATE OR REPLACE VIEW RunsText AS (
@@ -124,8 +121,8 @@ BEGIN
     UPDATE RunsData SET
         build_version = (SELECT add_str(NEW.build_version)),
         character_chosen = (SELECT add_str(NEW.character_chosen)),
-        items_purchased_ids = (SELECT add_str_many(NEW.items_purchased_names)),
-        items_purged_ids = (SELECT add_str_many(NEW.items_purged_names)),
+        items_purchased_ids = ARRAY((SELECT add_str_many(NEW.items_purchased_names))),
+        items_purged_ids = ARRAY((SELECT add_str_many(NEW.items_purged_names))),
         killed_by = (SELECT add_str(NEW.killed_by))
     WHERE
         RunsData.id = NEW.id;
@@ -136,55 +133,64 @@ CREATE TRIGGER runstext_update_trg INSTEAD OF UPDATE ON RunsText
     FOR EACH ROW EXECUTE FUNCTION runstext_update();
 
 
-CREATE TABLE CampfireChoice
-(
-    id SERIAL PRIMARY KEY,
-    run_id INT NOT NULL REFERENCES RunsData(id),
-    cdata TEXT,
-    floor INT NOT NULL,
-    "key" INT NOT NULL REFERENCES StrCache(id)
+CREATE TABLE CampfireChoice(
+    id serial primary key,
+    run_id int not null references RunsData(id),
+    cdata text,
+    floor int not null,
+    "key" int not null references StrCache(id)
 );
 
-CREATE TABLE DamageTaken
-(
-    id SERIAL PRIMARY KEY,
-    run_id INT NOT NULL REFERENCES RunsData(id),
-    enemies INT NOT NULL REFERENCES StrCache(id),
-    floor INT NOT NULL,
-    turns INT NOT NULL
+CREATE TABLE DamageTaken(
+    id serial primary key,
+    run_id int not null references RunsData(id),
+    enemies int not null references StrCache(id),
+    floor int not null,
+    turns int not null
 );
 
-CREATE TABLE BossRelics
-(
-    id SERIAL PRIMARY KEY,
-    run_id INT NOT NULL REFERENCES RunsData(id),
-    not_picked INT ARRAY,
-    picked INT NOT NULL REFERENCES StrCache(id)
+CREATE TABLE BossRelics(
+    id serial primary key,
+    run_id int not null references RunsData(id),
+    not_picked int array,
+    picked int not null references StrCache(id)
 );
 
-CREATE TABLE CardChoices
-(
-    id SERIAL PRIMARY KEY,
-    run_id INT NOT NULL REFERENCES RunsData(id),
-    not_picked INT ARRAY,
-    picked INT NOT NULL REFERENCES StrCache(id),
-    floor INT NOT NULL
+CREATE TABLE CardChoices(
+    id serial primary key,
+    run_id int not null references RunsData(id),
+    not_picked int array,
+    picked int not null references StrCache(id),
+    floor int not null
 );
 
-CREATE TABLE RelicObtains
-(
-    id SERIAL PRIMARY KEY,
-    run_id INT NOT NULL REFERENCES RunsData(id),
-    floor INT NOT NULL,
-    "key" INT REFERENCES StrCache(id)
+CREATE TABLE RelicObtains(
+    id serial primary key,
+    run_id int not null references RunsData(id),
+    floor int not null,
+    "key" int not null references StrCache(id)
 );
 
-CREATE TABLE PotionObtains
-(
-    id SERIAL PRIMARY KEY,
-    run_id INT NOT NULL REFERENCES RunsData(id),
-    floor INT NOT NULL,
-    "key" INT NOT NULL REFERENCES StrCache(id)
+CREATE TABLE PotionObtains(
+    id serial primary key,
+    run_id int not null references RunsData(id),
+    floor int not null,
+    "key" int not null references StrCache(id)
+);
+
+CREATE TABLE EventChoices(
+    id serial primary key,
+    run_id int not null references RunsData(id),
+    -- damage_healed + damage_taken
+	damage_delta int not null,
+	event_name_id int not null references StrCache(id),
+	floor int not null,
+	-- Combo of gold gained+lost
+	gold_delta int not null,
+	-- Combo of max_hp gained+lost
+	max_hp_delta int not null,
+	player_choice_id int not null references StrCache(id),
+	relics_obtained_ids int[]
 );
 
 -- Add empty string to cache
@@ -195,6 +201,7 @@ INSERT INTO StrCache(id, str) VALUES (1, '') ON CONFLICT DO NOTHING;
 drop trigger if exists runstext_update_trg ON RunsText;
 drop function if exists runstext_update;
 drop view if exists RunsText;
+drop table if exists EventChoices;
 drop table if exists BossRelics;
 drop table if exists CardChoices;
 drop table if exists DamageTaken;
