@@ -60,20 +60,20 @@
           "type": "array",
           "title": "gold_per_floor",
           "description": "How much gold was obtained on each floor",
-          "items": { "type": "integer" },
+          "items": { "type": "number" },
           "examples": [
               [115, 135, 12, 12, 31, 31, 42, 42, 42, 67, 87, 87, 106, 123, 123, 223, 223, 243, 198 ]
           ]
       },
       "floor_reached": {
-          "type": "integer",
+          "type": "number",
           "default": 0,
           "title": "floor_reached",
           "description": "What floor number the player reached",
           "examples": [19]
       },
       "playtime": {
-          "type": "integer",
+          "type": "number",
           "default": 0,
           "title": "playtime",
           "description": "Play time in seconds",
@@ -92,7 +92,7 @@
           ]
       },
       "score": {
-          "type": "integer",
+          "type": "number",
           "default": 0,
           "title": "score",
           "description": "Player's score at the end of the run",
@@ -173,7 +173,7 @@
           "default": [],
           "title": "potions_floor_usage",
           "description": "Which floors the player used a potion on",
-          "items": { "type": "integer", "title": "floor number" },
+          "items": { "type": "number", "title": "floor number" },
           "examples": [ [10, 11, 11 ] ]
       },
       "damage_taken": {
@@ -229,7 +229,7 @@
           "examples": [ [ "FlurryOfBlows"] ]
       },
       "campfire_rested": {
-          "type": "integer",
+          "type": "number",
           "default": 0,
           "description": "Number of times rested at a campfire",
           "examples": [ 1 ]
@@ -239,7 +239,7 @@
           "default": [],
           "title": "The item_purchase_floors Schema",
           "items": {
-              "type": "integer",
+              "type": "number",
               "default": 0,
               "title": "A Schema"
           },
@@ -249,13 +249,13 @@
           "type": "array",
           "default": [],
           "title": "The current_hp_per_floor Schema",
-          "items": { "type": "integer" },
+          "items": { "type": "number" },
           "examples": [
               [ 61, 51, 51, 51, 51, 51, 42, 42, 42, 17, 17, 17, 17, 17, 40, 6, 59, 11, 0 ]
           ]
       },
       "gold": {
-          "type": "integer",
+          "type": "number",
           "default": 0,
           "title": "gold",
           "description": "Gold amount at the end of the run"
@@ -284,7 +284,7 @@
           "description": "Was the entered manually (true) or random (false)"
       },
       "campfire_upgraded": {
-          "type": "integer",
+          "type": "number",
           "default": 0,
           "title": "The campfire_upgraded Schema",
           "examples": [ 2 ]
@@ -332,7 +332,7 @@
       "max_hp_per_floor": {
           "type": "array",
           "title": "The max_hp_per_floor Schema",
-          "items": { "type": "integer" },
+          "items": { "type": "number" },
           "examples": [
               [72, 72, 72, 72, 72, 72, 72, 72, 72, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77 ]
           ]
@@ -344,7 +344,7 @@
         "items": { "$ref": "#/definitions/CardChoice" }
       },
       "player_experience": {
-        "type": "integer",
+        "type": "number",
         "default": 0,
         "title": "The player_experience Schema",
         "description": "XP gained at the end of the run",
@@ -429,7 +429,7 @@
           "type": "array",
           "default": [],
           "title": "The items_purged_floors Schema",
-          "items": { "type": "integer" },
+          "items": { "type": "number" },
           "examples": [ [ 3] ]
       },
       "is_endless": {
@@ -442,7 +442,7 @@
           "type": "array",
           "default": [],
           "title": "The potions_floor_spawned Schema",
-          "items": { "type": "integer" },
+          "items": { "type": "number" },
           "examples": [ [1, 10, 11, 16 ] ]
       },
       "killed_by": {
@@ -882,34 +882,34 @@
   }],
     "definitions": {
         "CampfireChoice": {
-        "type": "object",
-        "title": "Campfire Choice",
-        "description": "One campfire selection",
-        "required": [ "data", "floor", "key" ],
-        "properties": {
-            "data": {
-                "type": "string",
-                "title": "Choice data",
-                "description": "If KEY is 'SMITH', this will be the card ID that was upgraded",
-                "examples": ["Eruption", "Prostrate" ]
+            "type": "object",
+            "title": "Campfire Choice",
+            "description": "One campfire selection",
+            "required": [ "floor", "key" ],
+            "properties": {
+                "data": {
+                    "type": "string",
+                    "title": "Choice data",
+                    "description": "If KEY is 'SMITH', this will be the card ID that was upgraded",
+                    "examples": ["Eruption", "Prostrate" ]
+                },
+                "floor": {
+                    "type": "number",
+                    "title": "Campfire floor",
+                    "description": "Which floor the campfire was on",
+                    "examples": [ 6, 8, 15 ]
+                },
+                "key": {
+                    "type": "string",
+                    "title": "Campfire action",
+                    "examples": ["SMITH", "REST" ]
+                }
             },
-            "floor": {
-                "type": "integer",
-                "title": "Campfire floor",
-                "description": "Which floor the campfire was on",
-                "examples": [ 6, 8, 15 ]
-            },
-            "key": {
-                "type": "string",
-                "title": "Campfire action",
-                "examples": ["SMITH", "REST" ]
-            }
-        },
-        "examples": [
-            { "data": "Eruption", "floor": 6, "key": "SMITH" },
-            { "data": "Prostrate", "floor": 8, "key": "SMITH" },
-            { "floor": 15, "key": "REST" }
-        ]
+            "examples": [
+                { "data": "Eruption", "floor": 6, "key": "SMITH" },
+                { "data": "Prostrate", "floor": 8, "key": "SMITH" },
+                { "floor": 15, "key": "REST" }
+            ]
         },
         "CardChoice": {
             "type": "object",
@@ -927,7 +927,7 @@
                     "items": { "type": "string" }
                 },
                 "picked": { "type": "string", "title": "Card that was picked" },
-                "floor": { "type": "integer" }
+                "floor": { "type": "number" }
             },
             "examples": [
                 { "not_picked": [ "Forethought", "Mind Blast" ], "picked": "PanicButton", "floor": 0 },
@@ -944,71 +944,71 @@
             ]
         },
         "DamageTaken": {
-        "type": "object",
-        "title": "A Schema",
-        "required": [
-            "damage",
-            "enemies",
-            "floor",
-            "turns"
-        ],
-        "properties": {
-            "damage": {
-                "type": "integer",
-                "title": "Damage Amount",
-                "description": "How much damage the player took",
-                "examples": [ 4, 10, 0, 30 ]
+            "type": "object",
+            "title": "A Schema",
+            "required": [
+                "damage",
+                "enemies",
+                "floor",
+                "turns"
+            ],
+            "properties": {
+                "damage": {
+                    "type": "number",
+                    "title": "Damage Amount",
+                    "description": "How much damage the player took",
+                    "examples": [ 4, 10, 0, 30 ]
+                },
+                "enemies": {
+                    "type": "string",
+                    "title": "Enemy Encounter Name",
+                    "examples": [ "Jaw Worm", "Cultist", "2 Louse", "Looter", "Gremlin Nob", "Gremlin Gang", "3 Louse", "Slime Boss" ]
+                },
+                "floor": {
+                    "type": "number",
+                    "title": "Floor of Encounter",
+                    "description": "Which floor the fight occured on",
+                    "examples": [ 1, 2, 5, 7, 10, 11, 13, 14, 16 ]
+                },
+                "turns": {
+                    "type": "number",
+                    "title": "Battle Turns",
+                    "description": "How many turns the fight lasted",
+                    "examples": [ 3, 4, 5, 2, 7 ]
+                }
             },
-            "enemies": {
-                "type": "string",
-                "title": "Enemy Encounter Name",
-                "examples": [ "Jaw Worm", "Cultist", "2 Louse", "Looter", "Gremlin Nob", "Gremlin Gang", "3 Louse", "Slime Boss" ]
-            },
-            "floor": {
-                "type": "integer",
-                "title": "Floor of Encounter",
-                "description": "Which floor the fight occured on",
-                "examples": [ 1, 2, 5, 7, 10, 11, 13, 14, 16 ]
-            },
-            "turns": {
-                "type": "integer",
-                "title": "Battle Turns",
-                "description": "How many turns the fight lasted",
-                "examples": [ 3, 4, 5, 2, 7 ]
-            }
-        },
-        "examples": [
-            { "damage": 4, "enemies": "Jaw Worm", "floor": 1, "turns": 3 },
-            { "damage": 10, "enemies": "Cultist", "floor": 2, "turns": 4 },
-            { "damage": 0, "enemies": "2 Louse", "floor": 5, "turns": 3 },
-            { "damage": 9, "enemies": "Looter", "floor": 7, "turns": 4 },
-            { "damage": 30, "enemies": "Gremlin Nob", "floor": 10, "turns": 5 },
-            { "damage": 0, "enemies": "Gremlin Gang", "floor": 11, "turns": 2 },
-            { "damage": 0, "enemies": "3 Louse", "floor": 13, "turns": 3 },
-            { "damage": 0, "enemies": "Looter", "floor": 14, "turns": 2 },
-            { "damage": 34, "enemies": "Slime Boss", "floor": 16, "turns": 7 }
-        ]
+            "examples": [
+                { "damage": 4, "enemies": "Jaw Worm", "floor": 1, "turns": 3 },
+                { "damage": 10, "enemies": "Cultist", "floor": 2, "turns": 4 },
+                { "damage": 0, "enemies": "2 Louse", "floor": 5, "turns": 3 },
+                { "damage": 9, "enemies": "Looter", "floor": 7, "turns": 4 },
+                { "damage": 30, "enemies": "Gremlin Nob", "floor": 10, "turns": 5 },
+                { "damage": 0, "enemies": "Gremlin Gang", "floor": 11, "turns": 2 },
+                { "damage": 0, "enemies": "3 Louse", "floor": 13, "turns": 3 },
+                { "damage": 0, "enemies": "Looter", "floor": 14, "turns": 2 },
+                { "damage": 34, "enemies": "Slime Boss", "floor": 16, "turns": 7 }
+            ]
         },
         "PotionObtained": {
-        "type": "object",
-        "title": "Potion Obtained",
-        "description": "When a potion was obtained",
-        "required": [
-            "floor",
-            "key"
-        ],
-        "properties": {
-            "floor": { "type": "integer" },
-            "key": { "type": "string", "description": "Potion ID" }
-        },
-        "examples": [
-            { "floor": 1, "key": "Swift Potion" },
-            { "floor": 4, "key": "Dexterity Potion" },
-            { "floor": 4, "key": "EntropicBrew" },
-            { "floor": 10, "key": "Fruit Juice" },
-            { "floor": 11, "key": "EntropicBrew" },
-            { "floor": 16, "key": "Dexterity Potion" }
-        ]
+            "type": "object",
+            "title": "Potion Obtained",
+            "description": "When a potion was obtained",
+            "required": [
+                "floor",
+                "key"
+            ],
+            "properties": {
+                "floor": { "type": "number" },
+                "key": { "type": "string", "description": "Potion ID" }
+            },
+            "examples": [
+                { "floor": 1, "key": "Swift Potion" },
+                { "floor": 4, "key": "Dexterity Potion" },
+                { "floor": 4, "key": "EntropicBrew" },
+                { "floor": 10, "key": "Fruit Juice" },
+                { "floor": 11, "key": "EntropicBrew" },
+                { "floor": 16, "key": "Dexterity Potion" }
+            ]
         },
         "FloorPath": {
             "type": ["string", "null"],
@@ -1023,7 +1023,7 @@
             ],
             "properties": {
                 "floor": {
-                    "type": "integer",
+                    "type": "number",
                     "title": "The floor Schema"
                 },
                 "key": {
@@ -1052,19 +1052,19 @@
                 "relics_obtained"
             ],
             "properties": {
-                "damage_healed": { "type": "integer", "description": "HP gained" },
-                "gold_gain": { "type": "integer", "title": "Gold gained" },
+                "damage_healed": { "type": "number", "description": "HP gained" },
+                "gold_gain": { "type": "number", "title": "Gold gained" },
                 "player_choice": { "type": "string", "title": "ID/key of player's choice" },
-                "damage_taken": { "type": "integer", "title": "The damage_taken Schema" },
-                "max_hp_gain": { "type": "integer", "title": "The max_hp_gain Schema" },
-                "max_hp_loss": { "type": "integer", "title": "The max_hp_loss Schema" },
+                "damage_taken": { "type": "number", "title": "The damage_taken Schema" },
+                "max_hp_gain": { "type": "number", "title": "The max_hp_gain Schema" },
+                "max_hp_loss": { "type": "number", "title": "The max_hp_loss Schema" },
                 "event_name": {
                     "type": "string",
                     "title": "The event ID",
                     "examples": [ "Lab", "WeMeetAgain" ]
                 },
-                "floor": { "type": "integer", "description": "Floor event occured on" },
-                "gold_loss": { "type": "integer", "title": "The gold_loss Schema" },
+                "floor": { "type": "number", "description": "Floor event occured on" },
+                "gold_loss": { "type": "number", "title": "The gold_loss Schema" },
                 "relics_obtained": {
                     "type": "array",
                     "default": [],

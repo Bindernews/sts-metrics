@@ -31,6 +31,11 @@ type Cardchoice struct {
 	Floor     int32
 }
 
+type CharacterList struct {
+	ID   int32
+	Name string
+}
+
 type Damagetaken struct {
 	ID      int32
 	RunID   int32
@@ -49,6 +54,14 @@ type Eventchoice struct {
 	MaxHpDelta        int32
 	PlayerChoiceID    int32
 	RelicsObtainedIds []int32
+}
+
+type Masterdeck struct {
+	ID       int32
+	RunID    int32
+	CardID   int32
+	Upgrades int16
+	Count    int16
 }
 
 type Potionobtain struct {
@@ -89,7 +102,6 @@ type Runsdatum struct {
 	ItemsPurgedIds       []int32
 	KilledBy             int32
 	LocalTime            string
-	MasterDeck           []int32
 	MaxHpPerFloor        []int32
 	NeowBonus            string
 	NeowCost             string
@@ -106,7 +118,7 @@ type Runsdatum struct {
 	SeedSourceTimestamp  sql.NullInt32
 	Timestamp            sql.NullTime
 	Victory              bool
-	WinRate              int32
+	WinRate              float64
 }
 
 type Runstext struct {
@@ -123,6 +135,23 @@ type Scope struct {
 	Key    string
 	Desc   string
 	Parent sql.NullInt32
+}
+
+type StatsCardCount struct {
+	CharID   int32
+	CardID   int32
+	Total    int64
+	Upgrades int64
+}
+
+type StatsOverview struct {
+	ID            int32
+	Name          string
+	Runs          int64
+	Wins          int64
+	AvgWinRate    float64
+	PDeckSize     []float32
+	PFloorReached []float32
 }
 
 type Strcache struct {

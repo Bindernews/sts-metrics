@@ -153,6 +153,41 @@ func (q *Queries) AddEventChoices(ctx context.Context, arg []AddEventChoicesPara
 	return q.db.CopyFrom(ctx, []string{"eventchoices"}, []string{"run_id", "damage_delta", "event_name_id", "floor", "gold_delta", "max_hp_delta", "player_choice_id", "relics_obtained_ids"}, &iteratorForAddEventChoices{rows: arg})
 }
 
+// iteratorForAddMasterDeck implements pgx.CopyFromSource.
+type iteratorForAddMasterDeck struct {
+	rows                 []AddMasterDeckParams
+	skippedFirstNextCall bool
+}
+
+func (r *iteratorForAddMasterDeck) Next() bool {
+	if len(r.rows) == 0 {
+		return false
+	}
+	if !r.skippedFirstNextCall {
+		r.skippedFirstNextCall = true
+		return true
+	}
+	r.rows = r.rows[1:]
+	return len(r.rows) > 0
+}
+
+func (r iteratorForAddMasterDeck) Values() ([]interface{}, error) {
+	return []interface{}{
+		r.rows[0].RunID,
+		r.rows[0].CardID,
+		r.rows[0].Count,
+		r.rows[0].Upgrades,
+	}, nil
+}
+
+func (r iteratorForAddMasterDeck) Err() error {
+	return nil
+}
+
+func (q *Queries) AddMasterDeck(ctx context.Context, arg []AddMasterDeckParams) (int64, error) {
+	return q.db.CopyFrom(ctx, []string{"masterdecks"}, []string{"run_id", "card_id", "count", "upgrades"}, &iteratorForAddMasterDeck{rows: arg})
+}
+
 // iteratorForAddPotionObtain implements pgx.CopyFromSource.
 type iteratorForAddPotionObtain struct {
 	rows                 []AddPotionObtainParams

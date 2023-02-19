@@ -23,6 +23,7 @@ func (s *StatsView) AddChart(name string, fn gin.HandlerFunc) {
 func (s *StatsView) DefaultCharts() *StatsView {
 	dv := &DefaultViews{}
 	s.AddChart("overview", s.Wrap(dv.OverviewView))
+	s.AddChart("characters", s.Wrap(dv.ListCharacters))
 	return s
 }
 
@@ -52,18 +53,45 @@ type DefaultViews struct{}
 func (*DefaultViews) OverviewView(c *gin.Context, qq *orm.Queries) error {
 	ctx := c.Request.Context()
 	char_name := c.Query("character")
-	char_id, err := qq.GetStr(ctx, char_name)
-	if err == nil {
-		return err
-	}
-	stats, err := qq.StatsGetOverall(ctx, char_id)
+	stats, err := qq.StatsGetOverview(ctx, char_name)
 	if err != nil {
 		c.Error(err)
 		return fmt.Errorf("unknown character: %s", char_name)
 	}
+
+	percentiles := []string{"p25", "p50", "p75"}
+	data := [][]any{
+		{"Character", stats.Name},
+		{"Runs", stats.Runs},
+		{"Wins", stats.Wins},
+		{"Avg Win Rate", stats.AvgWinRate},
+	}
+	data = append(data, lo.Map(stats.PDeckSize, func(v float32, i int) []any {
+		return []any{"Deck Size " + percentiles[i], v}
+	})...)
+	data = append(data, lo.Map(stats.PFloorReached, func(v float32, i int) []any {
+		return []any{"Floor Reached " + percentiles[i], v}
+	})...)
+
 	tmpl := StatsTableTempl{
 		Headers: []string{"Name", "Value"},
-		Data:    lo.Map(stats, ToAny[orm.StatsGetOverallRow]),
+		Rows:    data,
+	}
+	c.HTML(200, "chart_table.html", tmpl)
+	return nil
+}
+
+func (*DefaultViews) ListCharacters(c *gin.Context, qq *orm.Queries) (err error) {
+	var rows []orm.CharacterList
+	ctx := c.Request.Context()
+	if rows, err = qq.StatsListCharacters(ctx); err != nil {
+		return
+	}
+	tmpl := StatsTableTempl{
+		Headers: []string{"ID", "Name"},
+		Rows: lo.Map(rows, func(r orm.CharacterList, _ int) []any {
+			return []any{fmt.Sprint(r.ID), r.Name}
+		}),
 	}
 	c.HTML(200, "chart_table.html", tmpl)
 	return nil
@@ -71,7 +99,7 @@ func (*DefaultViews) OverviewView(c *gin.Context, qq *orm.Queries) error {
 
 type StatsTableTempl struct {
 	Headers []string
-	Data    []any
+	Rows    [][]any
 }
 
 func ToAny[T any](v T, _ int) any {

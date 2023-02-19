@@ -55,6 +55,11 @@ LANGUAGE SQL AS $$
     WHERE scopes.key = ANY(scope_list);
 $$;
 
+-- TEST DATA
+-- SELECT user_add({{ .test_user }});
+-- insert into scopes(key, "desc") values ('stats:view', 'Ability to view statistics');
+-- SELECT user_set_scopes({{ .test_user }}, '{stats:view}');
+
 ---- create above / drop below ----
 
 drop table if exists users_to_scopes;

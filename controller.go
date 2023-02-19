@@ -2,6 +2,8 @@ package stms
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	_ "golang.org/x/oauth2"
 
@@ -16,6 +18,7 @@ var ErrUnauthorized = errors.New("unauthorized")
 
 // Error for unknown chart id
 var ErrUnknownChart = errors.New("unknown chart")
+var ErrRunAlreadyUploaded = errors.New("run already uploaded")
 
 const (
 	// gin Context key for the user's email, set in
@@ -67,6 +70,11 @@ func (s *MainController) PostUpload(c *gin.Context) {
 		_, err := runData.AddToDb(ctx, orm.New(tx))
 		return err
 	}); err != nil {
+		// Duplicate play id is a bad request
+		if strings.Contains(err.Error(), "\"runsdata_play_id_key\"") {
+			AbortErr(c, 400, fmt.Errorf("%w - play_id = %s", ErrRunAlreadyUploaded, runData.PlayId))
+			return
+		}
 		c.Error(err)
 		c.AbortWithStatus(500)
 		return

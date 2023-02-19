@@ -8,10 +8,10 @@ import "encoding/json"
 // One campfire selection
 type CampfireChoice struct {
 	// If KEY is 'SMITH', this will be the card ID that was upgraded
-	Data string `json:"data" yaml:"data"`
+	Data *string `json:"data,omitempty" yaml:"data,omitempty"`
 
 	// Which floor the campfire was on
-	Floor int `json:"floor" yaml:"floor"`
+	Floor float64 `json:"floor" yaml:"floor"`
 
 	// Key corresponds to the JSON schema field "key".
 	Key string `json:"key" yaml:"key"`
@@ -22,9 +22,6 @@ func (j *CampfireChoice) UnmarshalJSON(b []byte) error {
 	var raw map[string]interface{}
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
-	}
-	if v, ok := raw["data"]; !ok || v == nil {
-		return fmt.Errorf("field data in CampfireChoice: required")
 	}
 	if v, ok := raw["floor"]; !ok || v == nil {
 		return fmt.Errorf("field floor in CampfireChoice: required")
@@ -44,7 +41,7 @@ func (j *CampfireChoice) UnmarshalJSON(b []byte) error {
 // One card choice
 type CardChoice struct {
 	// Floor corresponds to the JSON schema field "floor".
-	Floor int `json:"floor" yaml:"floor"`
+	Floor float64 `json:"floor" yaml:"floor"`
 
 	// Cards that were not picked
 	NotPicked []string `json:"not_picked" yaml:"not_picked"`
@@ -79,16 +76,16 @@ func (j *CardChoice) UnmarshalJSON(b []byte) error {
 
 type DamageTaken struct {
 	// How much damage the player took
-	Damage int `json:"damage" yaml:"damage"`
+	Damage float64 `json:"damage" yaml:"damage"`
 
 	// Enemies corresponds to the JSON schema field "enemies".
 	Enemies string `json:"enemies" yaml:"enemies"`
 
 	// Which floor the fight occured on
-	Floor int `json:"floor" yaml:"floor"`
+	Floor float64 `json:"floor" yaml:"floor"`
 
 	// How many turns the fight lasted
-	Turns int `json:"turns" yaml:"turns"`
+	Turns float64 `json:"turns" yaml:"turns"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -120,28 +117,28 @@ func (j *DamageTaken) UnmarshalJSON(b []byte) error {
 
 type EventChoice struct {
 	// HP gained
-	DamageHealed int `json:"damage_healed" yaml:"damage_healed"`
+	DamageHealed float64 `json:"damage_healed" yaml:"damage_healed"`
 
 	// DamageTaken corresponds to the JSON schema field "damage_taken".
-	DamageTaken int `json:"damage_taken" yaml:"damage_taken"`
+	DamageTaken float64 `json:"damage_taken" yaml:"damage_taken"`
 
 	// EventName corresponds to the JSON schema field "event_name".
 	EventName string `json:"event_name" yaml:"event_name"`
 
 	// Floor event occured on
-	Floor int `json:"floor" yaml:"floor"`
+	Floor float64 `json:"floor" yaml:"floor"`
 
 	// GoldGain corresponds to the JSON schema field "gold_gain".
-	GoldGain int `json:"gold_gain" yaml:"gold_gain"`
+	GoldGain float64 `json:"gold_gain" yaml:"gold_gain"`
 
 	// GoldLoss corresponds to the JSON schema field "gold_loss".
-	GoldLoss int `json:"gold_loss" yaml:"gold_loss"`
+	GoldLoss float64 `json:"gold_loss" yaml:"gold_loss"`
 
 	// MaxHpGain corresponds to the JSON schema field "max_hp_gain".
-	MaxHpGain int `json:"max_hp_gain" yaml:"max_hp_gain"`
+	MaxHpGain float64 `json:"max_hp_gain" yaml:"max_hp_gain"`
 
 	// MaxHpLoss corresponds to the JSON schema field "max_hp_loss".
-	MaxHpLoss int `json:"max_hp_loss" yaml:"max_hp_loss"`
+	MaxHpLoss float64 `json:"max_hp_loss" yaml:"max_hp_loss"`
 
 	// PlayerChoice corresponds to the JSON schema field "player_choice".
 	PlayerChoice string `json:"player_choice" yaml:"player_choice"`
@@ -200,7 +197,7 @@ type FloorPath *string
 // When a potion was obtained
 type PotionObtained struct {
 	// Floor corresponds to the JSON schema field "floor".
-	Floor int `json:"floor" yaml:"floor"`
+	Floor float64 `json:"floor" yaml:"floor"`
 
 	// Potion ID
 	Key string `json:"key" yaml:"key"`
@@ -229,7 +226,7 @@ func (j *PotionObtained) UnmarshalJSON(b []byte) error {
 
 type RelicObtain struct {
 	// Floor corresponds to the JSON schema field "floor".
-	Floor int `json:"floor" yaml:"floor"`
+	Floor float64 `json:"floor" yaml:"floor"`
 
 	// Key corresponds to the JSON schema field "key".
 	Key string `json:"key" yaml:"key"`
@@ -299,10 +296,10 @@ type RunSchemaJson struct {
 	CampfireChoices []CampfireChoice `json:"campfire_choices" yaml:"campfire_choices"`
 
 	// Number of times rested at a campfire
-	CampfireRested int `json:"campfire_rested" yaml:"campfire_rested"`
+	CampfireRested float64 `json:"campfire_rested" yaml:"campfire_rested"`
 
 	// CampfireUpgraded corresponds to the JSON schema field "campfire_upgraded".
-	CampfireUpgraded int `json:"campfire_upgraded" yaml:"campfire_upgraded"`
+	CampfireUpgraded float64 `json:"campfire_upgraded" yaml:"campfire_upgraded"`
 
 	// List of card choices
 	CardChoices []CardChoice `json:"card_choices" yaml:"card_choices"`
@@ -317,7 +314,7 @@ type RunSchemaJson struct {
 	CircletCount int `json:"circlet_count" yaml:"circlet_count"`
 
 	// CurrentHpPerFloor corresponds to the JSON schema field "current_hp_per_floor".
-	CurrentHpPerFloor []int `json:"current_hp_per_floor" yaml:"current_hp_per_floor"`
+	CurrentHpPerFloor []float64 `json:"current_hp_per_floor" yaml:"current_hp_per_floor"`
 
 	// List of DamageTaken events
 	DamageTaken []DamageTaken `json:"damage_taken" yaml:"damage_taken"`
@@ -326,13 +323,13 @@ type RunSchemaJson struct {
 	EventChoices []EventChoice `json:"event_choices" yaml:"event_choices"`
 
 	// What floor number the player reached
-	FloorReached int `json:"floor_reached" yaml:"floor_reached"`
+	FloorReached float64 `json:"floor_reached" yaml:"floor_reached"`
 
 	// Gold amount at the end of the run
-	Gold int `json:"gold" yaml:"gold"`
+	Gold float64 `json:"gold" yaml:"gold"`
 
 	// How much gold was obtained on each floor
-	GoldPerFloor []int `json:"gold_per_floor" yaml:"gold_per_floor"`
+	GoldPerFloor []float64 `json:"gold_per_floor" yaml:"gold_per_floor"`
 
 	// Is the player playing on some ascension mode?
 	IsAscensionMode bool `json:"is_ascension_mode" yaml:"is_ascension_mode"`
@@ -353,7 +350,7 @@ type RunSchemaJson struct {
 	IsTrial bool `json:"is_trial" yaml:"is_trial"`
 
 	// ItemPurchaseFloors corresponds to the JSON schema field "item_purchase_floors".
-	ItemPurchaseFloors []int `json:"item_purchase_floors" yaml:"item_purchase_floors"`
+	ItemPurchaseFloors []float64 `json:"item_purchase_floors" yaml:"item_purchase_floors"`
 
 	// ItemsPurchased corresponds to the JSON schema field "items_purchased".
 	ItemsPurchased []string `json:"items_purchased" yaml:"items_purchased"`
@@ -362,7 +359,7 @@ type RunSchemaJson struct {
 	ItemsPurged []string `json:"items_purged" yaml:"items_purged"`
 
 	// ItemsPurgedFloors corresponds to the JSON schema field "items_purged_floors".
-	ItemsPurgedFloors []int `json:"items_purged_floors" yaml:"items_purged_floors"`
+	ItemsPurgedFloors []float64 `json:"items_purged_floors" yaml:"items_purged_floors"`
 
 	// Encounter ID where player died
 	KilledBy string `json:"killed_by" yaml:"killed_by"`
@@ -374,7 +371,7 @@ type RunSchemaJson struct {
 	MasterDeck []string `json:"master_deck" yaml:"master_deck"`
 
 	// MaxHpPerFloor corresponds to the JSON schema field "max_hp_per_floor".
-	MaxHpPerFloor []int `json:"max_hp_per_floor" yaml:"max_hp_per_floor"`
+	MaxHpPerFloor []float64 `json:"max_hp_per_floor" yaml:"max_hp_per_floor"`
 
 	// ID of player's Neow choice
 	NeowBonus string `json:"neow_bonus" yaml:"neow_bonus"`
@@ -392,17 +389,17 @@ type RunSchemaJson struct {
 	PlayId string `json:"play_id" yaml:"play_id"`
 
 	// XP gained at the end of the run
-	PlayerExperience int `json:"player_experience" yaml:"player_experience"`
+	PlayerExperience float64 `json:"player_experience" yaml:"player_experience"`
 
 	// Play time in seconds
-	Playtime int `json:"playtime" yaml:"playtime"`
+	Playtime float64 `json:"playtime" yaml:"playtime"`
 
 	// PotionsFloorSpawned corresponds to the JSON schema field
 	// "potions_floor_spawned".
-	PotionsFloorSpawned []int `json:"potions_floor_spawned" yaml:"potions_floor_spawned"`
+	PotionsFloorSpawned []float64 `json:"potions_floor_spawned" yaml:"potions_floor_spawned"`
 
 	// Which floors the player used a potion on
-	PotionsFloorUsage []int `json:"potions_floor_usage" yaml:"potions_floor_usage"`
+	PotionsFloorUsage []float64 `json:"potions_floor_usage" yaml:"potions_floor_usage"`
 
 	// PotionsObtained corresponds to the JSON schema field "potions_obtained".
 	PotionsObtained []PotionObtained `json:"potions_obtained" yaml:"potions_obtained"`
@@ -417,7 +414,7 @@ type RunSchemaJson struct {
 	RelicsObtained []RelicObtain `json:"relics_obtained" yaml:"relics_obtained"`
 
 	// Player's score at the end of the run
-	Score int `json:"score" yaml:"score"`
+	Score float64 `json:"score" yaml:"score"`
 
 	// The run seed
 	SeedPlayed string `json:"seed_played" yaml:"seed_played"`
@@ -499,7 +496,7 @@ func (j *RunSchemaJson) UnmarshalJSON(b []byte) error {
 		plain.CircletCount = 0
 	}
 	if v, ok := raw["current_hp_per_floor"]; !ok || v == nil {
-		plain.CurrentHpPerFloor = []int{}
+		plain.CurrentHpPerFloor = []float64{}
 	}
 	if v, ok := raw["damage_taken"]; !ok || v == nil {
 		plain.DamageTaken = []DamageTaken{}
@@ -532,7 +529,7 @@ func (j *RunSchemaJson) UnmarshalJSON(b []byte) error {
 		plain.IsTrial = false
 	}
 	if v, ok := raw["item_purchase_floors"]; !ok || v == nil {
-		plain.ItemPurchaseFloors = []int{}
+		plain.ItemPurchaseFloors = []float64{}
 	}
 	if v, ok := raw["items_purchased"]; !ok || v == nil {
 		plain.ItemsPurchased = []string{}
@@ -541,7 +538,7 @@ func (j *RunSchemaJson) UnmarshalJSON(b []byte) error {
 		plain.ItemsPurged = []string{}
 	}
 	if v, ok := raw["items_purged_floors"]; !ok || v == nil {
-		plain.ItemsPurgedFloors = []int{}
+		plain.ItemsPurgedFloors = []float64{}
 	}
 	if v, ok := raw["killed_by"]; !ok || v == nil {
 		plain.KilledBy = ""
@@ -562,10 +559,10 @@ func (j *RunSchemaJson) UnmarshalJSON(b []byte) error {
 		plain.Playtime = 0
 	}
 	if v, ok := raw["potions_floor_spawned"]; !ok || v == nil {
-		plain.PotionsFloorSpawned = []int{}
+		plain.PotionsFloorSpawned = []float64{}
 	}
 	if v, ok := raw["potions_floor_usage"]; !ok || v == nil {
-		plain.PotionsFloorUsage = []int{}
+		plain.PotionsFloorUsage = []float64{}
 	}
 	if v, ok := raw["potions_obtained"]; !ok || v == nil {
 		plain.PotionsObtained = []PotionObtained{}

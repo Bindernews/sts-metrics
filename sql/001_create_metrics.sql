@@ -1,11 +1,21 @@
 
 -- Deduplicate names in other tables
 CREATE TABLE StrCache(
-    id SERIAL PRIMARY KEY,
+    id int primary key generated always as identity,
     str TEXT NOT NULL,
     UNIQUE (str)
 );
 CREATE INDEX ON StrCache USING HASH(str);
+
+-- Dedupe card names
+/*
+CREATE TABLE CardNames(
+    id int primary key generated always as identity,
+    "name" text not null,
+    UNIQUE ("name")
+);
+CREATE INDEX ON CardNames USING hash("name");
+*/
 
 CREATE OR REPLACE FUNCTION add_str(s TEXT) RETURNS INT
 LANGUAGE SQL AS $$
@@ -64,7 +74,7 @@ CREATE TABLE RunsData
     killed_by INT NOT NULL DEFAULT 1 REFERENCES StrCache(id),
     -- Local time in YYYYmmddHHMMSS format
     local_time TEXT NOT NULL,
-    master_deck INT ARRAY,
+    /** REVERSE master deck */
     -- Doctext
     max_hp_per_floor INT ARRAY,
     -- ID of player's Neow choice
@@ -193,14 +203,28 @@ CREATE TABLE EventChoices(
 	relics_obtained_ids int[]
 );
 
+CREATE TABLE MasterDecks(
+    id serial primary key,
+    run_id int not null references RunsData(id),
+    -- Card id WITHOUT upgrades
+    card_id int not null references StrCache(id),
+    -- How many upgrades this card has
+    upgrades int2 not null,
+    -- Copies of this card in the deck
+    count int2 not null,
+    -- These should be unique
+    UNIQUE (run_id, card_id, upgrades)
+);
+
 -- Add empty string to cache
-INSERT INTO StrCache(id, str) VALUES (1, '') ON CONFLICT DO NOTHING;
+INSERT INTO StrCache(str) VALUES ('');
 
 ---- create above / drop below ----
 
 drop trigger if exists runstext_update_trg ON RunsText;
 drop function if exists runstext_update;
 drop view if exists RunsText;
+drop table if exists MasterDecks;
 drop table if exists EventChoices;
 drop table if exists BossRelics;
 drop table if exists CardChoices;

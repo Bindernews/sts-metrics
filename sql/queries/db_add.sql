@@ -41,6 +41,9 @@ INSERT INTO EventChoices
      relics_obtained_ids)
 VALUES
     ($1,$2,$3,$4,$5,$6,$7,$8);
+-- name: AddMasterDeck :copyfrom
+INSERT INTO MasterDecks (run_id, card_id, count, upgrades)
+    VALUES ($1,$2,$3,$4);
 
 -- name: GetStr :one
 SELECT id FROM StrCache WHERE str = $1;
@@ -53,4 +56,7 @@ SELECT CC.id, CC.cdata, CC.floor, StrCache.str as "key" FROM CampfireChoice AS C
     LEFT JOIN StrCache ON CC.key = StrCache.id
     WHERE CC.id = $1
     ORDER BY floor;
+
+
+
 

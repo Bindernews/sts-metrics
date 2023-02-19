@@ -42,6 +42,13 @@ type AddEventChoicesParams struct {
 	RelicsObtainedIds []int32
 }
 
+type AddMasterDeckParams struct {
+	RunID    int32
+	CardID   int32
+	Count    int16
+	Upgrades int16
+}
+
 type AddPotionObtainParams struct {
 	RunID int32
 	Floor int32
@@ -104,7 +111,7 @@ type AddRunRawParams struct {
 	SeedSourceTimestamp  sql.NullInt32
 	Timestamp            sql.NullTime
 	Victory              bool
-	WinRate              int32
+	WinRate              float64
 }
 
 func (q *Queries) AddRunRaw(ctx context.Context, arg AddRunRawParams) (int32, error) {
@@ -213,7 +220,7 @@ func (q *Queries) GetCampfires(ctx context.Context, id int32) ([]GetCampfiresRow
 }
 
 const getRun = `-- name: GetRun :one
-SELECT id, ascension_level, build_version, campfire_rested, campfire_upgraded, character_chosen, choose_seed, circlet_count, current_hp_per_floor, floor_reached, gold, gold_per_floor, is_beta, is_daily, is_endless, is_prod, is_trial, items_purchased_floors, items_purchased_ids, items_purged_floors, items_purged_ids, killed_by, local_time, master_deck, max_hp_per_floor, neow_bonus, neow_cost, path_per_floor, path_taken, play_id, player_experience, playtime, potions_floor_spawned, potions_floor_usage, purchased_purges, score, seed_played, seed_source_timestamp, timestamp, victory, win_rate FROM RunsData WHERE id = $1 LIMIT 1
+SELECT id, ascension_level, build_version, campfire_rested, campfire_upgraded, character_chosen, choose_seed, circlet_count, current_hp_per_floor, floor_reached, gold, gold_per_floor, is_beta, is_daily, is_endless, is_prod, is_trial, items_purchased_floors, items_purchased_ids, items_purged_floors, items_purged_ids, killed_by, local_time, max_hp_per_floor, neow_bonus, neow_cost, path_per_floor, path_taken, play_id, player_experience, playtime, potions_floor_spawned, potions_floor_usage, purchased_purges, score, seed_played, seed_source_timestamp, timestamp, victory, win_rate FROM RunsData WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetRun(ctx context.Context, id int32) (Runsdatum, error) {
@@ -243,7 +250,6 @@ func (q *Queries) GetRun(ctx context.Context, id int32) (Runsdatum, error) {
 		&i.ItemsPurgedIds,
 		&i.KilledBy,
 		&i.LocalTime,
-		&i.MasterDeck,
 		&i.MaxHpPerFloor,
 		&i.NeowBonus,
 		&i.NeowCost,
