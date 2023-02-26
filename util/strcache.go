@@ -1,4 +1,4 @@
-package stms
+package util
 
 import (
 	"context"

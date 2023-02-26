@@ -10,8 +10,11 @@ import (
 	"time"
 
 	"github.com/bindernews/sts-msr/orm"
+	"github.com/bindernews/sts-msr/util"
 	"github.com/samber/lo"
 )
+
+type StrCache = util.StrCache
 
 func (c BossRelicChoice) ToOrm(sc StrCache, runid int32) orm.AddBossRelicsParams {
 	return orm.AddBossRelicsParams{

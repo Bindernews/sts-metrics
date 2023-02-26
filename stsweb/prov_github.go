@@ -1,4 +1,4 @@
-package tonoauth
+package stsweb
 
 import (
 	"context"

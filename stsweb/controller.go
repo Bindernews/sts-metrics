@@ -1,4 +1,4 @@
-package stms
+package stsweb
 
 import (
 	"compress/gzip"
@@ -14,6 +14,7 @@ import (
 	_ "golang.org/x/oauth2"
 
 	"github.com/Masterminds/sprig/v3"
+	stms "github.com/bindernews/sts-msr"
 	"github.com/bindernews/sts-msr/chart"
 	"github.com/bindernews/sts-msr/orm"
 	"github.com/bindernews/sts-msr/util"
@@ -38,12 +39,12 @@ const (
 
 type MainController struct {
 	Srv      *Services
-	strcache StrCache
+	strcache util.StrCache
 }
 
 func (s *MainController) Init(r *gin.Engine) error {
 	db := orm.New(s.Srv.Pool)
-	s.strcache = NewStrCache(db.StrCacheToId, db.StrCacheAdd)
+	s.strcache = util.NewStrCache(db.StrCacheToId, db.StrCacheAdd)
 
 	r.Use(sessions.Sessions("main", s.Srv.SeStore))
 	r.SetFuncMap(sprig.FuncMap())
@@ -125,7 +126,7 @@ func (s *MainController) Test1(c *gin.Context) {
 }
 
 func (s *MainController) PostUpload(c *gin.Context) {
-	var runData RunSchemaJson
+	var runData stms.RunSchemaJson
 	// Parse data
 	if err := c.BindJSON(&runData); err != nil {
 		AbortErr(c, 400, err)
@@ -153,7 +154,7 @@ func (s *MainController) PostUpload(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Thank you!"})
 }
 
-func (s *MainController) saveRun(c *gin.Context, data *RunSchemaJson) {
+func (s *MainController) saveRun(c *gin.Context, data *stms.RunSchemaJson) {
 	wr, err := os.Create(path.Join(s.Srv.Config.RunsDir, data.PlayId.String()+".run.gz"))
 	if err == nil {
 		c.Error(err)
