@@ -3,6 +3,7 @@ package tonoauth
 import (
 	"context"
 
+	"github.com/bindernews/sts-msr/util"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/oauth2"
 )
@@ -28,7 +29,7 @@ func NewGithubProvider(opts ProviderOpts) *Provider {
 		emailsOut := []EmailRes{}
 
 		// Request the user's emails from github, then parse the response
-		ezreq := EzHttpRequest{
+		ezreq := util.EzHttpRequest{
 			Method: "GET",
 			Url:    "https://api.github.com/user/emails",
 			Headers: gin.H{

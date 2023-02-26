@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>{{.Title}}</title>
+    {{if .IsTable}}
+    <link href="https://unpkg.com/tabulator-tables@5.4.4/dist/css/tabulator.min.css" rel="stylesheet">
+    {{end}}
+    {{.Head}}
+  </head>
+  <body>
+    <a href="/">Home</a><br/>
+    {{template "filters.html" .}}
+    {{if .IsTable}}
+      <div id="table"></div>
+      <script async type="text/javascript" src="https://unpkg.com/tabulator-tables@5.4.4/dist/js/tabulator.min.js"></script>
+    {{else}}
+      <canvas id="chartc"></canvas>
+      <script async src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {{end}}
+    <script type="text/javascript">
+      const rawdata = {{.RawData}};
+      const opts = {{.Options}};
+      {{.ChartCode}}
+      document.addEventListener('load', showChart, true);
+    </script>
+  </body>
+</html>

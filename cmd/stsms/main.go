@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"os"
 
@@ -11,20 +13,47 @@ import (
 	"github.com/bindernews/sts-msr/tonoauth"
 )
 
+const usage = `Usage of %s:
+  -c, --config string
+      Config file (default "%s")
+`
+
+var (
+	optConfig = flag.String("config", "config.toml", "")
+)
+
+func init() {
+	flag.StringVar(optConfig, "c", "config.toml", "")
+
+	flag.Usage = func() {
+		fmt.Printf(usage,
+			os.Args[0],
+			flag.Lookup("config").DefValue,
+		)
+	}
+}
+
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Fatalf("Error loading .env file: %+v", err)
 	}
+	flag.Parse()
+
+	srv := new(stms.Services)
 	r := gin.Default()
-	if err := setupControllers(r); err != nil {
+	if err := setup(srv, r); err != nil {
 		log.Fatalln(err)
 	}
-	r.Run("localhost:8080")
+	if err := r.Run(srv.Config.Listen...); err != nil {
+		log.Fatalln(err)
+	}
 }
 
-func setupControllers(r *gin.Engine) (err error) {
-	srv := &stms.Services{}
+func setup(srv *stms.Services, r *gin.Engine) (err error) {
 	if err = srv.LoadDefaults(); err != nil {
+		return
+	}
+	if err = srv.Config.LoadFile(*optConfig, false); err != nil {
 		return
 	}
 	ctrlMain := stms.MainController{Srv: srv}

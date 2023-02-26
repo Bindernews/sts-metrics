@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 
+	"github.com/bindernews/sts-msr/util"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	csrf "github.com/utrack/gin-csrf"
@@ -95,12 +96,12 @@ func (s *Controller) LoginRedirect(c *gin.Context) {
 
 	// Read provider
 	if err := c.BindQuery(&params); err != nil {
-		abortErr(c, 400, ErrBadRequest)
+		util.AbortErr(c, 400, ErrBadRequest)
 		return
 	}
 
 	// If user is already logged in skip login
-	if sessGetString(sess, KeyUserEmail) != "" {
+	if util.SessGetString(sess, KeyUserEmail) != "" {
 		url = s.getNextUrl(sess)
 	} else {
 		sess.Set(keyOauthKind, params.Kind)
@@ -128,18 +129,18 @@ func (s *Controller) GetRedirect(c *gin.Context) {
 	sess := sessions.Default(c)
 	// Read params
 	if err := c.BindQuery(&params); err != nil {
-		abortErr(c, 400, err)
+		util.AbortErr(c, 400, err)
 		return
 	}
 	// csrf check
 	if params.State != csrf.GetToken(c) {
-		abortErr(c, 403, ErrBadCsrf)
+		util.AbortErr(c, 403, ErrBadCsrf)
 		return
 	}
 	// Get provider
-	provider := s.providers[sessGetString(sess, keyOauthKind)]
+	provider := s.providers[util.SessGetString(sess, keyOauthKind)]
 	if provider == nil {
-		abortErr(c, 403, ErrSessionExpired)
+		util.AbortErr(c, 403, ErrSessionExpired)
 		return
 	}
 	// Obtain the real token
@@ -147,13 +148,13 @@ func (s *Controller) GetRedirect(c *gin.Context) {
 	if err != nil || token == nil {
 		// Log the error
 		c.Error(err)
-		abortErr(c, 403, ErrAuthFailed)
+		util.AbortErr(c, 403, ErrAuthFailed)
 		return
 	}
 	// Get email
 	email, err := provider.GetEmail(ctx, token)
 	if err != nil {
-		abortErr(c, 403, err)
+		util.AbortErr(c, 403, err)
 		return
 	}
 
@@ -168,7 +169,7 @@ func (s *Controller) GetRedirect(c *gin.Context) {
 // Make sure to call sess.Save()
 func (s *Controller) getNextUrl(sess sessions.Session) string {
 	// Get the redirect URL and then clear it
-	nextUrl := sessGetString(sess, KeyRedirectUrl)
+	nextUrl := util.SessGetString(sess, KeyRedirectUrl)
 	if nextUrl == "" {
 		nextUrl = s.HomeUrl
 	}

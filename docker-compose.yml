@@ -7,8 +7,18 @@ services:
     ports:
     - "18592:5432"
     environment:
-      POSTGRES_PASSWORD: "BadPassword1234"
+    - POSTGRES_PASSWORD
     shm_size: 256MB
+  jupyter:
+    image: jupyter/scipy-notebook
+    ports:
+    - "8888:8888"
+    environment:
+    - POSTGRES_PASSWORD
+    volumes:
+    - C:/Users/bindernews/Projects/sts-metrics/:/home/jovyan/work
+    links:
+    - "db:database"
 
 volumes:
   db-data:

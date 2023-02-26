@@ -2,8 +2,38 @@
 
 package stms
 
-import "fmt"
 import "encoding/json"
+import "fmt"
+import "github.com/google/uuid"
+
+type BossRelicChoice struct {
+	// NotPicked corresponds to the JSON schema field "not_picked".
+	NotPicked []string `json:"not_picked" yaml:"not_picked"`
+
+	// Picked corresponds to the JSON schema field "picked".
+	Picked string `json:"picked" yaml:"picked"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *BossRelicChoice) UnmarshalJSON(b []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	type Plain BossRelicChoice
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	if v, ok := raw["not_picked"]; !ok || v == nil {
+		plain.NotPicked = []string{}
+	}
+	if v, ok := raw["picked"]; !ok || v == nil {
+		plain.Picked = ""
+	}
+	*j = BossRelicChoice(plain)
+	return nil
+}
 
 // One campfire selection
 type CampfireChoice struct {
@@ -253,41 +283,12 @@ func (j *RelicObtain) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type RunSchemaJsonBossRelicsElem struct {
-	// NotPicked corresponds to the JSON schema field "not_picked".
-	NotPicked []string `json:"not_picked" yaml:"not_picked"`
-
-	// Picked corresponds to the JSON schema field "picked".
-	Picked string `json:"picked" yaml:"picked"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *RunSchemaJsonBossRelicsElem) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	type Plain RunSchemaJsonBossRelicsElem
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	if v, ok := raw["not_picked"]; !ok || v == nil {
-		plain.NotPicked = []string{}
-	}
-	if v, ok := raw["picked"]; !ok || v == nil {
-		plain.Picked = ""
-	}
-	*j = RunSchemaJsonBossRelicsElem(plain)
-	return nil
-}
-
 type RunSchemaJson struct {
 	// The Ascension level (0 - 20) TODO - does this appear on 0 ascension?
 	AscensionLevel int `json:"ascension_level" yaml:"ascension_level"`
 
 	// BossRelics corresponds to the JSON schema field "boss_relics".
-	BossRelics []RunSchemaJsonBossRelicsElem `json:"boss_relics" yaml:"boss_relics"`
+	BossRelics []BossRelicChoice `json:"boss_relics" yaml:"boss_relics"`
 
 	// BuildVersion corresponds to the JSON schema field "build_version".
 	BuildVersion string `json:"build_version" yaml:"build_version"`
@@ -386,7 +387,7 @@ type RunSchemaJson struct {
 	PathTaken []string `json:"path_taken" yaml:"path_taken"`
 
 	// UUID for this run
-	PlayId string `json:"play_id" yaml:"play_id"`
+	PlayId uuid.UUID `json:"play_id" yaml:"play_id"`
 
 	// XP gained at the end of the run
 	PlayerExperience float64 `json:"player_experience" yaml:"player_experience"`
@@ -472,7 +473,7 @@ func (j *RunSchemaJson) UnmarshalJSON(b []byte) error {
 		plain.AscensionLevel = 0
 	}
 	if v, ok := raw["boss_relics"]; !ok || v == nil {
-		plain.BossRelics = []RunSchemaJsonBossRelicsElem{}
+		plain.BossRelics = []BossRelicChoice{}
 	}
 	if v, ok := raw["build_version"]; !ok || v == nil {
 		plain.BuildVersion = ""

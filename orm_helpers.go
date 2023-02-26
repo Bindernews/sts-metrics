@@ -2,7 +2,9 @@ package stms
 
 import (
 	"context"
+	"database/sql"
 	"errors"
+	"log"
 	"regexp"
 	"strconv"
 
@@ -17,57 +19,76 @@ var CardUpgradeRegex = regexp.MustCompile(`(.+)\+([0-9]+)$`)
 // Error when StrCache can't resolve all strings
 var ErrCouldNotLoadStrings = errors.New("could not load strings")
 
+var ErrCouldNotStoreStrings = errors.New("cannot add new strings")
+
+// Function that adds a list of strings to the cache.
+type StrStoreFn func(context.Context, []string) error
+
 // Function that takes a list of strings and resolves them into IDs.
-// It may insert strings that aren't already there, or error if a
-// string isn't already cached.
 type StrLoadFn func(context.Context, []string) ([]int32, error)
 
 // Cache of strings to StrCache.id
 type StrCache struct {
-	Strs   map[string]int32
-	LoadFn StrLoadFn
+	strs    map[string]int32
+	StoreFn StrStoreFn
+	LoadFn  StrLoadFn
 }
 
-func NewStrCache(loadFn StrLoadFn) *StrCache {
+func NewStrCache(loadFn StrLoadFn, storeFn StrStoreFn) *StrCache {
 	c := StrCache{
-		Strs:   make(map[string]int32),
-		LoadFn: loadFn,
+		strs:    make(map[string]int32),
+		StoreFn: storeFn,
+		LoadFn:  loadFn,
 	}
 	return &c
 }
 
 // Loads all strings used by the passed users
-func (s *StrCache) Load(ctx context.Context, strings ...[]string) error {
+func (s *StrCache) Load(ctx context.Context, strings ...[]string) (err error) {
 	needed := make(map[string]int32)
 	// Gather all needed strings
 	for _, u := range strings {
 		for _, v := range u {
-			if _, ok := s.Strs[v]; !ok {
+			if _, ok := s.strs[v]; !ok {
 				needed[v] = 0
 			}
 		}
 	}
-	// Query from DB
 	keys := lo.Keys(needed)
-	values, err := s.LoadFn(ctx, keys)
-	if err != nil {
-		return err
+	var values []int32
+	// Query from DB
+	if s.StoreFn != nil {
+		if err = s.StoreFn(ctx, keys); err != nil {
+			log.Println(err)
+			return ErrCouldNotStoreStrings
+		}
+	}
+	if values, err = s.LoadFn(ctx, keys); err != nil {
+		return
 	}
 	if len(values) != len(keys) {
-		return ErrCouldNotLoadStrings
+		return ErrCouldNotStoreStrings
 	}
 	for i, v := range values {
-		s.Strs[keys[i]] = v
+		s.strs[keys[i]] = v
 	}
 	return nil
 }
 
 func (s *StrCache) Get(k string) int32 {
-	return s.Strs[k]
+	return s.strs[k]
+}
+
+func (s *StrCache) MaybeGet(k *string) sql.NullInt32 {
+	if k == nil {
+		return sql.NullInt32{Valid: false}
+	} else {
+		return sql.NullInt32{Valid: true, Int32: s.Get(*k)}
+	}
 }
 
 func (s *StrCache) GetAll(keys []string) []int32 {
-	return lo.Map(keys, func(k string, _ int) int32 { return s.Strs[k] })
+	return lo.Map(keys, func(k string, _ int) int32 { return s.strs[k] })
 }
 
 type StrCacheUser interface {

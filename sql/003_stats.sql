@@ -4,7 +4,18 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS character_list AS (
     SELECT DISTINCT S.id, S.str as "name" FROM StrCache S
     LEFT JOIN RunsData R ON S.id = R.character_chosen
     WHERE S.id = R.character_chosen
+    ORDER BY S.str
 );
+
+CREATE OR REPLACE FUNCTION character_list_refresh() RETURNS TRIGGER
+LANGUAGE plpgsql AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW character_list;
+    RETURN NULL;
+END $$;
+
+CREATE TRIGGER character_list_refresh AFTER INSERT OR UPDATE OR DELETE
+ON RunsData FOR EACH STATEMENT EXECUTE FUNCTION character_list_refresh();
 
 CREATE OR REPLACE VIEW stats_overview AS (
     WITH
@@ -33,10 +44,7 @@ CREATE OR REPLACE VIEW stats_card_counts AS (
         R.character_chosen as char_id,
         D.card_id,
         sum(D.count) as total,
-        sum(D.count * CASE
-            WHEN D.upgrades > 0 THEN 1
-            ELSE 0 END
-        ) as upgrades
+        sum(case when D.upgrades > 0 THEN D.count else 0 end) as upgrades
     FROM RunsData R
     JOIN MasterDecks D ON R.id = D.run_id
     GROUP BY R.character_chosen, D.card_id
@@ -47,4 +55,6 @@ CREATE OR REPLACE VIEW stats_card_counts AS (
 
 drop view if exists stats_overview;
 drop view if exists stats_card_counts;
+drop trigger character_list_refresh ON RunsData;
+drop function if exists character_list_refresh;
 drop materialized view if exists character_list;

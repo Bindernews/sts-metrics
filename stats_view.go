@@ -1,8 +1,12 @@
 package stms
 
 import (
+	"context"
 	"fmt"
+	"html/template"
+	"strings"
 
+	"github.com/bindernews/sts-msr/chart"
 	"github.com/bindernews/sts-msr/orm"
 	"github.com/gin-gonic/gin"
 	"github.com/samber/lo"
@@ -53,31 +57,58 @@ type DefaultViews struct{}
 func (*DefaultViews) OverviewView(c *gin.Context, qq *orm.Queries) error {
 	ctx := c.Request.Context()
 	char_name := c.Query("character")
+	var char_list []string
+	if err := listChars(qq, &char_list); err != nil {
+		return err
+	}
+	// Default character if none specified
+	if char_name == "" && len(char_list) > 0 {
+		char_name = char_list[0]
+	}
 	stats, err := qq.StatsGetOverview(ctx, char_name)
 	if err != nil {
 		c.Error(err)
 		return fmt.Errorf("unknown character: %s", char_name)
 	}
 
-	percentiles := []string{"p25", "p50", "p75"}
-	data := [][]any{
+	const percentiles = "(p25, p50, p75)"
+	data := []struct {
+		Name  string
+		Value any
+	}{
 		{"Character", stats.Name},
 		{"Runs", stats.Runs},
 		{"Wins", stats.Wins},
 		{"Avg Win Rate", stats.AvgWinRate},
+		{"Deck Size Quartiles " + percentiles, ListJoin(stats.PDeckSize, ", ")},
+		{"Floor Reached Quartiles " + percentiles, ListJoin(stats.PFloorReached, ", ")},
 	}
-	data = append(data, lo.Map(stats.PDeckSize, func(v float32, i int) []any {
-		return []any{"Deck Size " + percentiles[i], v}
-	})...)
-	data = append(data, lo.Map(stats.PFloorReached, func(v float32, i int) []any {
-		return []any{"Floor Reached " + percentiles[i], v}
-	})...)
 
-	tmpl := StatsTableTempl{
-		Headers: []string{"Name", "Value"},
-		Rows:    data,
+	tmpl := chart.ChartTemplate{
+		Title: "Stats Overview",
+		Options: chart.TabularOpts{
+			Layout: "fitColumns",
+			Columns: []chart.TabularColumn{
+				{Title: "Name", Field: "Name"},
+				{Title: "Value", Field: "Value"},
+			},
+		},
+		Filters: []chart.Filter{
+			{
+				Label:   "Character",
+				Name:    "character",
+				Type:    "select",
+				Value:   char_name,
+				Options: char_list,
+			},
+		},
+		ChartCode: template.JS(`
+		function showChart() { opts.data = rawdata; new Tabulator('#table', opts); }
+		`),
+		RawData: lo.ToAnySlice(data),
+		IsTable: true,
 	}
-	c.HTML(200, "chart_table.html", tmpl)
+	c.HTML(200, "chartview.html", tmpl)
 	return nil
 }
 
@@ -97,11 +128,26 @@ func (*DefaultViews) ListCharacters(c *gin.Context, qq *orm.Queries) (err error)
 	return nil
 }
 
+func listChars(qq *orm.Queries, outList *[]string) error {
+	list, err := qq.StatsListCharacters(context.Background())
+	if err != nil {
+		return err
+	}
+	*outList = lo.Map(list, func(v orm.CharacterList, _ int) string {
+		return v.Name
+	})
+	return nil
+}
+
 type StatsTableTempl struct {
 	Headers []string
 	Rows    [][]any
 }
 
-func ToAny[T any](v T, _ int) any {
-	return v
+func ToStr[T any](v T, _ int) string {
+	return fmt.Sprint(v)
+}
+
+func ListJoin[T any](co []T, sep string) string {
+	return strings.Join(lo.Map(co, ToStr[T]), sep)
 }

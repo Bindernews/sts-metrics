@@ -1,0 +1,24 @@
+{{if .Filters}}
+<form action="" method="get">
+{{range .Filters}}
+  {{$elemid := printf "filter-%s" .Name}}
+  <label for="{{$elemid}}">{{.Label}}</label>
+  {{if eq .Type "select"}}
+  <select class="filter-input" id="{{$elemid}}" name="{{.Name}}">
+    {{$value := .Value}}
+    {{range .Options}}
+    <option value="{{.}}" {{if eq $value .}}selected{{end}}>{{.}}</option>
+    {{end}}
+  </select>
+  {{else if eq .Type "text"}}
+  <input class="filter-input" type="text" id="{{$elemid}}" name="{{.Name}}" value="{{.Value}}" />
+  {{else}}
+  Unknown filter type: {{.Type}}
+  {{end}}
+  <br/>
+{{end}}
+<input type="submit" value="Go" />
+</form>
+<br/>
+{{end}}
+

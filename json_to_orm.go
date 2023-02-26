@@ -13,11 +13,23 @@ import (
 	"github.com/samber/lo"
 )
 
+func (c BossRelicChoice) ToOrm(sc *StrCache, runid int32) orm.AddBossRelicsParams {
+	return orm.AddBossRelicsParams{
+		RunID:     runid,
+		NotPicked: sc.GetAll(c.NotPicked),
+		Picked:    sc.Get(c.Picked),
+	}
+}
+
+func (c *BossRelicChoice) GetStrings() []string {
+	return append([]string{c.Picked}, c.NotPicked...)
+}
+
 // Convert CampfireChoice to an orm object
 func (c CampfireChoice) ToOrm(sc *StrCache, runid int32) orm.AddCampfireParams {
 	return orm.AddCampfireParams{
 		RunID: runid,
-		Cdata: SqlString(c.Data),
+		Data:  sc.MaybeGet(c.Data),
 		Key:   sc.Get(c.Key),
 		Floor: int32(c.Floor),
 	}
@@ -110,11 +122,6 @@ func (s *RunSchemaJson) ToAddRunRaw(sc *StrCache) orm.AddRunRawParams {
 		FloorReached:      int32(s.FloorReached),
 		Gold:              int32(s.Gold),
 		GoldPerFloor:      mapInt32(s.GoldPerFloor),
-		IsBeta:            s.IsBeta,
-		IsDaily:           s.IsDaily,
-		IsEndless:         s.IsEndless,
-		IsProd:            s.IsProd,
-		IsTrial:           s.IsTrial,
 		//
 		ItemsPurchasedFloors: mapInt32(s.ItemPurchaseFloors),
 		ItemsPurgedFloors:    mapInt32(s.ItemsPurgedFloors),
@@ -125,7 +132,7 @@ func (s *RunSchemaJson) ToAddRunRaw(sc *StrCache) orm.AddRunRawParams {
 		NeowCost:         s.NeowCost,
 		PathPerFloor:     pathToStringFwd(pathNorm),
 		PathTaken:        pathToStringFwd(s.PathTaken),
-		PlayID:           s.PlayId,
+		PlayID:           s.PlayId.String(),
 		PlayerExperience: int32(s.PlayerExperience),
 		Playtime:         int32(s.Playtime),
 		//
@@ -141,18 +148,13 @@ func (s *RunSchemaJson) ToAddRunRaw(sc *StrCache) orm.AddRunRawParams {
 	}
 }
 
-func (s *RunSchemaJson) ToSetRunText(runid int32) orm.SetRunTextParams {
-	return orm.SetRunTextParams{
-		ID:                  runid,
-		BuildVersion:        s.BuildVersion,
-		CharacterChosen:     s.CharacterChosen,
-		ItemsPurchasedNames: s.ItemsPurchased,
-		ItemsPurgedNames:    s.ItemsPurged,
-	}
-}
-
 func (s *RunSchemaJson) GetStrings() []string {
 	out := []string{s.BuildVersion, s.CharacterChosen, s.KilledBy}
+	out = append(out, s.ItemsPurchased...)
+	out = append(out, s.ItemsPurged...)
+	for _, u := range s.BossRelics {
+		out = append(out, u.GetStrings()...)
+	}
 	for _, u := range s.CampfireChoices {
 		out = append(out, u.GetStrings()...)
 	}
@@ -176,7 +178,7 @@ func (s *RunSchemaJson) GetStrings() []string {
 
 // Add this Run to the database. Returns the rowid of the run.
 func (r *RunSchemaJson) AddToDb(ctx context.Context, db *orm.Queries) (runId int32, err error) {
-	sc := NewStrCache(db.AddStrMany)
+	sc := NewStrCache(db.StrCacheToId, db.StrCacheAdd)
 	deck := NewMasterDeck()
 	deck.AddCards(r.MasterDeck)
 	if err = sc.Load(ctx, r.GetStrings(), deck.GetStrings()); err != nil {
@@ -186,10 +188,39 @@ func (r *RunSchemaJson) AddToDb(ctx context.Context, db *orm.Queries) (runId int
 	if err != nil {
 		return
 	}
-	if err = db.SetRunText(ctx, r.ToSetRunText(runId)); err != nil {
+	flags := map[string]bool{
+		"ascension": r.IsAscensionMode,
+		"beta":      r.IsBeta,
+		"daily":     r.IsDaily,
+		"endless":   r.IsEndless,
+		"prod":      r.IsProd,
+		"trial":     r.IsTrial,
+	}
+	for k, ok := range flags {
+		if ok {
+			if err = db.AddFlag(ctx, orm.AddFlagParams{
+				RunID: runId,
+				Flag:  orm.FlagKind(k),
+			}); err != nil {
+				return
+			}
+		}
+	}
+	if err = db.AddRunText(ctx, orm.AddRunTextParams{
+		ID:                runId,
+		BuildVersion:      sc.Get(r.BuildVersion),
+		CharacterChosen:   sc.Get(r.CharacterChosen),
+		ItemsPurchasedIds: sc.GetAll(r.ItemsPurchased),
+		ItemsPurgedIds:    sc.GetAll(r.ItemsPurged),
+		KilledBy:          sc.Get(r.KilledBy),
+	}); err != nil {
 		return
 	}
 	if _, err = db.AddMasterDeck(ctx, deck.ToOrm(sc, runId)); err != nil {
+		return
+	}
+	ormBossRelics := MapToOrm[orm.AddBossRelicsParams](r.BossRelics, sc, runId)
+	if _, err = db.AddBossRelics(ctx, ormBossRelics); err != nil {
 		return
 	}
 	ormCampfires := MapToOrm[orm.AddCampfireParams](r.CampfireChoices, sc, runId)

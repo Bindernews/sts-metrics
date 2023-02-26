@@ -1,0 +1,27 @@
+listen = ["localhost:8080"]
+runs_dir = "data/runs"
+
+[[chart]]
+name = "Overview"
+sql = '''SELECT row_to_json(S.*) FROM stats_overview S WHERE S.name = ANY($1::text[])'''
+type = "table"
+params = [
+    { def='character' },
+]
+columns = [
+    { title="Name", field="name" },
+    { title="Runs", field="runs" },
+    { title="Wins", field="wins" },
+    { title="Avg Win Rate", field="avg_win_rate" },
+    { title='Deck Size (p25,p50,p75)', field="p_deck_size" },
+    { title='Floor Reached (p25,p50,p75)', field='p_floor_reached' },
+]
+transformer = '''((d) => d.map(e => e[0]))'''
+
+[[chart]]
+name = 'Card Stats'
+type = 'raw'
+params = [
+    { def='character' },
+]
+

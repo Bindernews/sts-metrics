@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/bindernews/sts-msr/tonoauth"
+	"github.com/bindernews/sts-msr/util"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/postgres"
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,7 @@ type Services struct {
 	Pool      *pgxpool.Pool
 	SeStore   sessions.Store
 	CsrfGuard gin.HandlerFunc
+	Config    *Config
 }
 
 func (s *Services) LoadDefaults() error {
@@ -40,6 +42,8 @@ func (s *Services) LoadDefaults() error {
 		Secret: os.Getenv("CSRF_SECRET"),
 	})
 
+	s.Config = NewConfig()
+
 	return nil
 }
 
@@ -52,7 +56,7 @@ func (s *Services) AuthRequireScopes(scopes []string) gin.HandlerFunc {
 		ctx := c.Request.Context()
 
 		// Attempt to get the user's email address
-		email := sessGetString(sess, tonoauth.KeyUserEmail)
+		email := util.SessGetString(sess, tonoauth.KeyUserEmail)
 		if email == "" {
 			AbortErr(c, 403, ErrUnauthorized)
 			return
@@ -81,7 +85,7 @@ func (s *Services) AuthRequireScopes(scopes []string) gin.HandlerFunc {
 func (s *Services) CtxSetEmail() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		sess := sessions.Default(c)
-		email := sessGetString(sess, tonoauth.KeyUserEmail)
+		email := util.SessGetString(sess, tonoauth.KeyUserEmail)
 		c.Set(CtxEmail, email)
 		c.Next()
 	}

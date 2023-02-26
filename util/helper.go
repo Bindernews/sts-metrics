@@ -1,4 +1,4 @@
-package tonoauth
+package util
 
 import (
 	"bytes"
@@ -8,15 +8,16 @@ import (
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v4"
 )
 
-func abortErr(c *gin.Context, code int, err error) {
+func AbortErr(c *gin.Context, code int, err error) {
 	c.AbortWithStatusJSON(code, c.Error(err).JSON())
 }
 
 // Returns the value of the session key, or an empty string if
 // the value doesn't exist, or is not a string.
-func sessGetString(s sessions.Session, key string) string {
+func SessGetString(s sessions.Session, key string) string {
 	val := s.Get(key)
 	if val == nil {
 		return ""
@@ -54,6 +55,26 @@ func (r *EzHttpRequest) Do(client *http.Client, jsonOut any) error {
 	defer res.Body.Close()
 	if err := json.NewDecoder(res.Body).Decode(jsonOut); err != nil {
 		return err
+	}
+	return nil
+}
+
+func ScanRows[T any](rows pgx.Rows, dest *[]T) error {
+	for rows.Next() {
+		o := new(T)
+		if err := rows.Scan(o); err != nil {
+			return err
+		}
+		*dest = append(*dest, *o)
+	}
+	return nil
+}
+
+func TryEach[T any](list []T, fn func(T) error) error {
+	for _, v := range list {
+		if err := fn(v); err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -105,9 +105,7 @@
           "format": "uuid",
           "title": "play_id",
           "description": "UUID for this run",
-          "examples": [
-              "69aa9b89-aa88-48b3-bc91-d9f6b4cd0c7b"
-          ]
+          "examples": [ "69aa9b89-aa88-48b3-bc91-d9f6b4cd0c7b" ]
       },
       "local_time": {
           "type": "string",
@@ -371,59 +369,7 @@
           "type": "array",
           "default": [],
           "title": "The boss_relics Schema",
-          "items": {
-              "type": "object",
-              "default": {},
-              "title": "A Schema",
-              "required": [
-                  "not_picked",
-                  "picked"
-              ],
-              "properties": {
-                  "not_picked": {
-                      "type": "array",
-                      "default": [],
-                      "title": "The not_picked Schema",
-                      "items": {
-                          "type": "string",
-                          "title": "A Schema",
-                          "examples": [
-                              "Velvet Choker",
-                              "SacredBark"
-                          ]
-                      },
-                      "examples": [
-                          ["Velvet Choker",
-                              "SacredBark"
-                          ]
-                      ]
-                  },
-                  "picked": {
-                      "type": "string",
-                      "default": "",
-                      "title": "The picked Schema",
-                      "examples": [
-                          "Cursed Key"
-                      ]
-                  }
-              },
-              "examples": [{
-                  "not_picked": [
-                      "Velvet Choker",
-                      "SacredBark"
-                  ],
-                  "picked": "Cursed Key"
-              }]
-          },
-          "examples": [
-              [{
-                  "not_picked": [
-                      "Velvet Choker",
-                      "SacredBark"
-                  ],
-                  "picked": "Cursed Key"
-              }]
-          ]
+          "items": { "$ref": "#/definitions/BossRelicChoice" }
       },
       "items_purged_floors": {
           "type": "array",
@@ -1075,6 +1021,29 @@
             "examples": [
                 { "damage_healed": 0, "gold_gain": 0, "player_choice": "Got Potions", "damage_taken": 0, "max_hp_gain": 0, "max_hp_loss": 0, "event_name": "Lab", "floor": 4, "gold_loss": 0 },
                 { "damage_healed": 0, "gold_gain": 0, "player_choice": "Gave Potion", "damage_taken": 0, "relics_obtained": [ "Anchor" ], "max_hp_gain": 0, "max_hp_loss": 0, "event_name": "WeMeetAgain", "floor": 12, "gold_loss": 0 }
+            ]
+        },
+        "BossRelicChoice": {
+            "type": "object",
+            "default": {},
+            "title": "Boss Relic Choice",
+            "required": [
+                "not_picked",
+                "picked"
+            ],
+            "properties": {
+                "not_picked": {
+                    "type": "array",
+                    "default": [],
+                    "items": { "type": "string" }
+                },
+                "picked": {
+                    "type": "string",
+                    "default": ""
+                }
+            },
+            "examples": [
+                { "not_picked": [ "Velvet Choker", "SacredBark" ], "picked": "Cursed Key" }
             ]
         }
     }
