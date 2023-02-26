@@ -112,6 +112,15 @@ type Masterdeck struct {
 	Count    int16
 }
 
+type Perfloordatum struct {
+	ID        int32
+	RunID     int32
+	Floor     int16
+	Gold      int32
+	CurrentHp int32
+	MaxHp     int32
+}
+
 type Potionobtain struct {
 	ID    int32
 	RunID int32
@@ -140,19 +149,16 @@ type Runsdatum struct {
 	CharacterChosen      int32
 	ChooseSeed           bool
 	CircletCount         sql.NullInt32
-	CurrentHpPerFloor    []int32
 	FloorReached         int32
 	Gold                 int32
-	GoldPerFloor         []int32
 	ItemsPurchasedFloors []int32
 	ItemsPurchasedIds    []int32
 	ItemsPurgedFloors    []int32
 	ItemsPurgedIds       []int32
 	KilledBy             int32
 	LocalTime            string
-	MaxHpPerFloor        []int32
-	NeowBonus            string
-	NeowCost             string
+	NeowBonusID          int32
+	NeowCostID           int32
 	PathPerFloor         string
 	PathTaken            string
 	PlayID               string

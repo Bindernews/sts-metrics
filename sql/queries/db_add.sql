@@ -3,15 +3,13 @@ SELECT * FROM RunsData WHERE id = $1 LIMIT 1;
 
 -- name: AddRunRaw :one
 INSERT INTO RunsData
-    (ascension_level, campfire_rested, campfire_upgraded,
-     choose_seed, circlet_count, current_hp_per_floor, floor_reached, gold, gold_per_floor,
-     items_purchased_floors, items_purged_floors, local_time, max_hp_per_floor, neow_bonus,
-     neow_cost, path_per_floor, path_taken, play_id, player_experience, playtime,
-     potions_floor_spawned, potions_floor_usage, purchased_purges, score, seed_played,
-     seed_source_timestamp, "timestamp", victory, win_rate)
+    (ascension_level, campfire_rested, campfire_upgraded, choose_seed, circlet_count,
+     floor_reached, gold, items_purchased_floors, items_purged_floors, local_time,
+     path_per_floor, path_taken, play_id, player_experience, playtime, potions_floor_spawned,
+     potions_floor_usage, purchased_purges, score, seed_played, seed_source_timestamp,
+     "timestamp", victory, win_rate)
 VALUES (
-    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
-    $21,$22,$23,$24,$25,$26,$27,$28,$29
+    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24
 )
 RETURNING RunsData.id;
 
@@ -24,7 +22,9 @@ UPDATE RunsData SET
     character_chosen = $3,
     items_purchased_ids = $4,
     items_purged_ids = $5,
-    killed_by = $6
+    killed_by = $6,
+    neow_bonus_id = $7,
+    neow_cost_id = $8
 WHERE
     id = $1;
 
@@ -50,6 +50,8 @@ VALUES
 INSERT INTO MasterDecks (run_id, card_id, count, upgrades) VALUES ($1,$2,$3,$4);
 -- name: AddBossRelics :copyfrom
 INSERT INTO BossRelics (run_id, not_picked, picked) VALUES ($1,$2,$3);
+-- name: AddPerFloor :copyfrom
+INSERT INTO PerFloorData (run_id, floor, gold, current_hp, max_hp) VALUES ($1,$2,$3,$4,$5);
 
 -- name: GetStr :one
 SELECT id FROM StrCache WHERE str = $1;

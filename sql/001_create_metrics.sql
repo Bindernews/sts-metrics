@@ -60,12 +60,10 @@ CREATE TABLE RunsData(
     character_chosen int not null default 1 references StrCache(id),
     choose_seed boolean not null,
     circlet_count int,
-    current_hp_per_floor int array,
     /* REVERSE damage taken */
     -- EventChoices []RunSchemaJsonEventChoicesElem `json:"event_choices" yaml:"event_choices"`
     floor_reached int not null ,
     gold int not null ,
-    gold_per_floor int array,
     items_purchased_floors int array,
     items_purchased_ids int array,
     -- Card remove floors
@@ -77,12 +75,10 @@ CREATE TABLE RunsData(
     -- Local time in YYYYmmddHHMMSS format
     local_time text not null,
     /** REVERSE master deck */
-    -- Doctext
-    max_hp_per_floor int array,
     -- ID of player's Neow choice
-    neow_bonus text not null,
+    neow_bonus_id int not null default 1 references StrCache(id),
     -- Trade-off when making Neow choice
-    neow_cost text not null,
+    neow_cost_id int not null default 1 references StrCache(id),
     -- Path per floor as a single string
     path_per_floor text not null,
     -- Path taken, stored as single string of characters
@@ -132,7 +128,7 @@ CREATE TABLE PerFloorData(
     gold int not null,
     current_hp int not null,
     max_hp int not null,
-    "path" char(4)
+    primary key (run_id, floor)
 );
 
 CREATE TABLE CampfireChoice(
@@ -225,6 +221,7 @@ drop table if exists CampfireChoice;
 drop table if exists RelicObtains;
 drop table if exists PotionObtains;
 drop table if exists RunFlags;
+drop table if exists PerFloorData;
 drop table if exists RunsData;
 drop table if exists StrCache;
 drop type if exists flag_kind;

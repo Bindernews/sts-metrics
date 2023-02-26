@@ -30,15 +30,21 @@ var ErrUnknownChart = errors.New("unknown chart")
 var ErrRunAlreadyUploaded = errors.New("run already uploaded")
 
 const (
-	// gin Context key for the user's email, set in
+	// gin Context key for the user's email
 	CtxEmail = "Email"
+	// gin context key for the string cache
+	CtxStrCache = "StrCache"
 )
 
 type MainController struct {
-	Srv *Services
+	Srv      *Services
+	strcache StrCache
 }
 
 func (s *MainController) Init(r *gin.Engine) error {
+	db := orm.New(s.Srv.Pool)
+	s.strcache = NewStrCache(db.StrCacheToId, db.StrCacheAdd)
+
 	r.Use(sessions.Sessions("main", s.Srv.SeStore))
 	r.SetFuncMap(sprig.FuncMap())
 	r.LoadHTMLGlob("templates/*.html")
@@ -132,7 +138,7 @@ func (s *MainController) PostUpload(c *gin.Context) {
 	// Store in DB
 	ctx := c.Request.Context()
 	if err := s.Srv.Pool.BeginFunc(ctx, func(tx pgx.Tx) error {
-		_, err := runData.AddToDb(ctx, orm.New(tx))
+		_, err := runData.AddToDb(ctx, s.strcache, orm.New(tx))
 		return err
 	}); err != nil {
 		// Duplicate play id is a bad request

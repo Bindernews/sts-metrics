@@ -33,7 +33,7 @@ serve:
     go run cmd/stsms/main.go
 
 migrate DEST:
-    cd sql; tern migrate --destination {{DEST}}
+    cd sql && tern migrate --destination {{DEST}}
 
 upload-runs DIR URL:
     cd "{{DIR}}" && for fn in $(find . -iname "*.run"); do echo -n "$fn "; curl -X POST "{{URL}}" --data-binary "@$fn"; echo; done

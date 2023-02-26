@@ -222,6 +222,42 @@ func (q *Queries) AddMasterDeck(ctx context.Context, arg []AddMasterDeckParams) 
 	return q.db.CopyFrom(ctx, []string{"masterdecks"}, []string{"run_id", "card_id", "count", "upgrades"}, &iteratorForAddMasterDeck{rows: arg})
 }
 
+// iteratorForAddPerFloor implements pgx.CopyFromSource.
+type iteratorForAddPerFloor struct {
+	rows                 []AddPerFloorParams
+	skippedFirstNextCall bool
+}
+
+func (r *iteratorForAddPerFloor) Next() bool {
+	if len(r.rows) == 0 {
+		return false
+	}
+	if !r.skippedFirstNextCall {
+		r.skippedFirstNextCall = true
+		return true
+	}
+	r.rows = r.rows[1:]
+	return len(r.rows) > 0
+}
+
+func (r iteratorForAddPerFloor) Values() ([]interface{}, error) {
+	return []interface{}{
+		r.rows[0].RunID,
+		r.rows[0].Floor,
+		r.rows[0].Gold,
+		r.rows[0].CurrentHp,
+		r.rows[0].MaxHp,
+	}, nil
+}
+
+func (r iteratorForAddPerFloor) Err() error {
+	return nil
+}
+
+func (q *Queries) AddPerFloor(ctx context.Context, arg []AddPerFloorParams) (int64, error) {
+	return q.db.CopyFrom(ctx, []string{"perfloordata"}, []string{"run_id", "floor", "gold", "current_hp", "max_hp"}, &iteratorForAddPerFloor{rows: arg})
+}
+
 // iteratorForAddPotionObtain implements pgx.CopyFromSource.
 type iteratorForAddPotionObtain struct {
 	rows                 []AddPotionObtainParams
