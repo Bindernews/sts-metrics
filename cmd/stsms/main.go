@@ -45,21 +45,22 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	server := &http.Server{
-		Addr:    srv.Config.Listen,
-		Handler: r,
-	}
-	go func() {
-		if err := server.ListenAndServe(); err != nil {
-			log.Fatalln(err)
-		}
-	}()
+	server := &http.Server{Addr: srv.Config.Listen, Handler: r}
+	go safeServe(server)
 
 	adminRouter := gin.Default()
+	adminServer := &http.Server{Addr: srv.Config.AdminListen, Handler: adminRouter}
 	adminRouter.POST("/stop", func(c *gin.Context) {
-		server.Shutdown(context.Background())
+		c.JSON(200, gin.H{"status": "ok"})
+		ctx := context.Background()
+		server.Shutdown(ctx)
+		adminServer.Shutdown(ctx)
 	})
-	if err := adminRouter.Run(srv.Config.AdminListen); err != nil {
+	safeServe(adminServer)
+}
+
+func safeServe(server *http.Server) {
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalln(err)
 	}
 }
@@ -71,11 +72,6 @@ func setup(srv *web.Services, r *gin.Engine) (err error) {
 	if err = srv.Config.LoadFile(*optConfig, false); err != nil {
 		return
 	}
-	if srv.Config.DebugMode {
-		gin.SetMode(gin.DebugMode)
-	} else {
-		gin.SetMode(gin.ReleaseMode)
-	}
 
 	ctrlMain := web.MainController{Srv: srv}
 	if err = ctrlMain.Init(r); err != nil {
@@ -86,12 +82,6 @@ func setup(srv *web.Services, r *gin.Engine) (err error) {
 	ctrlOauth.AddProviders(
 		web.NewGithubProvider(web.NewProviderOptsFromEnv("GH_")))
 	if err = ctrlOauth.Init(r); err != nil {
-		return
-	}
-	// Setup charts view
-	ctrlCharts := web.StatsView{Srv: srv}
-	ctrlCharts.DefaultCharts()
-	if err = ctrlCharts.Init(r.Group("/stats2")); err != nil {
 		return
 	}
 	return

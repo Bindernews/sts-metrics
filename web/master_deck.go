@@ -1,4 +1,4 @@
-package stms
+package web
 
 import (
 	"regexp"
@@ -11,23 +11,6 @@ import (
 // Regex that splits a card into base name and upgrade count.
 // If the card name does not match, it has not been upgraded.
 var CardUpgradeRegex = regexp.MustCompile(`(.+)\+([0-9]+)$`)
-
-type StrCacheUser interface {
-	// Returns the list of all cacheable strings used by this object
-	GetStrings() []string
-}
-
-type ConvToOrm[T any] interface {
-	ToOrm(sc StrCache, runid int32) T
-}
-
-func MapToOrm[T any, E ConvToOrm[T]](inp []E, sc StrCache, runid int32) []T {
-	out := make([]T, len(inp))
-	for i, e := range inp {
-		out[i] = e.ToOrm(sc, runid)
-	}
-	return out
-}
 
 // Parsed master deck entry
 type DeckEntry struct {

@@ -1,4 +1,4 @@
-package stms
+package web
 
 // Helpers for mapping the generated JSON structs to the generated SQL structs
 
@@ -11,26 +11,29 @@ import (
 	"time"
 
 	"github.com/bindernews/sts-msr/orm"
-	"github.com/bindernews/sts-msr/util"
 	"github.com/jackc/pgtype"
 	"github.com/samber/lo"
 )
 
-// Helper for generated json_model code
-func extProcessRaw(raw map[string]any) map[string]any {
-	return lo.OmitByKeys(raw, []string{
-		"ascension_level", "boss_relics", "build_version", "campfire_choices", "campfire_rested", "campfire_upgraded",
-		"card_choices", "character_chosen", "chose_seed", "circlet_count", "current_hp_per_floor", "daily_mods",
-		"damage_taken", "event_choices", "floor_reached", "gold", "gold_per_floor", "is_ascension_mode", "is_beta",
-		"is_daily", "is_endless", "is_prod", "is_trial", "item_purchase_floors", "items_purchased", "items_purged",
-		"items_purged_floors", "killed_by", "local_time", "master_deck", "max_hp_per_floor", "neow_bonus", "neow_cost",
-		"path_per_floor", "path_taken", "play_id", "player_experience", "playtime", "potions_floor_spawned",
-		"potions_floor_usage", "potions_obtained", "purchased_purges", "relics", "relics_obtained", "score",
-		"seed_played", "seed_source_timestamp", "special_seed", "timestamp", "victory", "win_rate",
-	})
+// Make sure data is properly round-tripped.
+// It's not the fastest method, but oh well.
+func (j *RunSchemaJson) MarshalJSON() ([]byte, error) {
+	// NOTE: could use mapstucture library, but again, perf is not that important here
+	type Plain RunSchemaJson
+	plain := Plain(*j)
+	plainData, err := json.Marshal(plain)
+	if err != nil {
+		return nil, err
+	}
+	raw := make(map[string]any)
+	if err := json.Unmarshal(plainData, &raw); err != nil {
+		return nil, err
+	}
+	for k, v := range j.Extra {
+		raw[k] = v
+	}
+	return json.Marshal(raw)
 }
-
-type StrCache = util.StrCache
 
 func (c BossRelicChoice) ToOrm(sc StrCache, runid int32) orm.AddBossRelicsParams {
 	return orm.AddBossRelicsParams{
@@ -158,7 +161,7 @@ func (s *RunSchemaJson) ToAddRunRaw(sc StrCache) orm.AddRunRawParams {
 		Score:            int32(s.Score),
 		SeedPlayed:       s.SeedPlayed,
 		//
-		SeedSourceTimestamp: SqlInt32(s.SeedSourceTimestamp),
+		SeedSourceTimestamp: sqlInt32(s.SeedSourceTimestamp),
 		SpecialSeed:         int32(s.SpecialSeed),
 		Timestamp:           sql.NullTime{Time: tstamp, Valid: true},
 		Victory:             s.Victory,
@@ -306,15 +309,6 @@ func (r *RunSchemaJson) AddToDb(ctx context.Context, sc StrCache, db *orm.Querie
 	return
 }
 
-func (s *RunSchemaJson) FromAddRunRaw(m *orm.AddRunRawParams) error {
-	s.PathPerFloor = lo.Map(pathToStringRev(m.PathPerFloor), func(s string, _ int) FloorPath {
-		return FloorPath(ReNull(s))
-	})
-	s.PathTaken = pathToStringRev(m.PathTaken)
-	// TODO update
-	return nil
-}
-
 var pathToMapFwd = map[string]string{
 	"BOSS": "B",
 }
@@ -373,22 +367,28 @@ func ReNull(s string) *string {
 	}
 }
 
-func SqlInt32(v int) sql.NullInt32 {
+func sqlInt32(v int) sql.NullInt32 {
 	return sql.NullInt32{Int32: int32(v), Valid: true}
 }
 
-func SqlString(v *string) sql.NullString {
-	if v == nil || *v == "" {
-		return sql.NullString{Valid: false}
-	} else {
-		return sql.NullString{Valid: true, String: *v}
-	}
-}
-
+// Convert an array of float64 to an array of int32
 func mapInt32(ar []float64) []int32 {
 	out := make([]int32, len(ar))
 	for i, v := range ar {
 		out[i] = int32(v)
+	}
+	return out
+}
+
+type ConvToOrm[T any] interface {
+	ToOrm(sc StrCache, runid int32) T
+}
+
+// Calls ToOrm on inp, returning the result
+func MapToOrm[T any, E ConvToOrm[T]](inp []E, sc StrCache, runid int32) []T {
+	out := make([]T, len(inp))
+	for i, e := range inp {
+		out[i] = e.ToOrm(sc, runid)
 	}
 	return out
 }

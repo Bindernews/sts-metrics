@@ -2,6 +2,6 @@ altair==4.2.2
 numpy==1.24.2
 pandas==1.5.3
 psycopg2-binary==2.9.5
-pydotenv==0.0.7
+python-dotenv==1.0.0
 sqlalchemy==2.0.4
 streamlit==1.19.0

@@ -1,4 +1,4 @@
-package util
+package web
 
 import (
 	"bytes"
@@ -59,6 +59,8 @@ func (r *EzHttpRequest) Do(client *http.Client, jsonOut any) error {
 	return nil
 }
 
+// Scan database rows into an array of T, returning the first
+// error that occurs.
 func ScanRows[T any](rows pgx.Rows, dest *[]T) error {
 	for rows.Next() {
 		o := new(T)

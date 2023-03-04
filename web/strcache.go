@@ -1,4 +1,4 @@
-package util
+package web
 
 import (
 	"context"
@@ -21,6 +21,7 @@ type StrStoreFn func(context.Context, []string) error
 // Function that takes a list of strings and resolves them into IDs.
 type StrLoadFn func(context.Context, []string) ([]int32, error)
 
+// Cache of strings to their database ID
 type StrCache interface {
 	Load(ctx context.Context, strings ...[]string) error
 	Get(key string) int32
@@ -28,7 +29,6 @@ type StrCache interface {
 	GetAll(keys []string) []int32
 }
 
-// Cache of strings to StrCache.id
 type syncStrCache struct {
 	strs    map[string]int32
 	lock    sync.RWMutex

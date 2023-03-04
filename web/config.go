@@ -1,4 +1,4 @@
-package stms
+package web
 
 import (
 	"errors"
@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/bindernews/sts-msr/chart"
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -19,21 +18,8 @@ type Config struct {
 	// Runs in release mode by default, unless this is true in which case
 	// gin is run in debug mode.
 	DebugMode bool `toml:"debug_mode"`
-	// SQL section of the config
-	Sql ConfigSql `toml:"sql"`
 	// Directory where runs are stored
 	RunsDir string `toml:"runs_dir"`
-	// List of defined charts
-	Charts []chart.ChartToml `toml:"chart"`
-	// List of extra files to include
-}
-
-type ConfigSql struct {
-	// File(s) that will be run on startup to create temporary functions,
-	// views, etc.
-	SetupFiles []string `toml:"setup_files"`
-	// Inline startup script
-	SetupScript string `toml:"setup_script"`
 }
 
 func NewConfig() *Config {

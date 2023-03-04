@@ -13,11 +13,7 @@ import (
 
 	_ "golang.org/x/oauth2"
 
-	"github.com/Masterminds/sprig/v3"
-	stms "github.com/bindernews/sts-msr"
-	"github.com/bindernews/sts-msr/chart"
 	"github.com/bindernews/sts-msr/orm"
-	"github.com/bindernews/sts-msr/util"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4"
@@ -27,34 +23,7 @@ import (
 // Generic unauthorized error
 var ErrUnauthorized = errors.New("unauthorized")
 
-// Error for unknown chart id
-var ErrUnknownChart = errors.New("unknown chart")
 var ErrRunAlreadyUploaded = errors.New("run already uploaded")
-
-// Character predef
-var (
-	predefCharacterArray = chart.NewEnumParam(
-		"Character(s)",
-		"character_a",
-		"SELECT name FROM character_list",
-		true,
-		true,
-	)
-	predefCharacterOne = chart.NewEnumParam(
-		"Character",
-		"character",
-		"SELECT name FROM character_list",
-		false,
-		false,
-	)
-	predefCardByCharacter = chart.NewEnumParam(
-		"Card",
-		"char_card",
-		"",
-		false,
-		false,
-	)
-)
 
 const (
 	// gin Context key for the user's email
@@ -69,17 +38,23 @@ const (
 
 type MainController struct {
 	Srv      *Services
-	strcache util.StrCache
+	strcache StrCache
 	gcache   *cache.Cache
 }
 
 func (s *MainController) Init(r *gin.Engine) error {
 	db := orm.New(s.Srv.Pool)
-	s.strcache = util.NewStrCache(db.StrCacheToId, db.StrCacheAdd)
+	s.strcache = NewStrCache(db.StrCacheToId, db.StrCacheAdd)
 	s.gcache = cache.New(5*time.Minute, 10*time.Minute)
 
+	// Set the gin run mode
+	if s.Srv.Config.DebugMode {
+		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	r.Use(sessions.Sessions("main", s.Srv.SeStore))
-	r.SetFuncMap(sprig.FuncMap())
 	r.LoadHTMLGlob("templates/*.html")
 
 	// Make directory to store runs in
@@ -89,33 +64,12 @@ func (s *MainController) Init(r *gin.Engine) error {
 	r.RouterGroup.
 		POST("/upload", s.PostUpload, s.handleUpload).
 		POST("/upload-file", s.PostUploadFile, s.handleUpload).
-		GET("/pingdb", s.PingDB).
+		GET("/ping", s.PingDB).
 		GET("/", s.Srv.CtxSetEmail(), s.GetIndex)
 
 	// Serve static files
 	r.StaticFS("/static", gin.Dir("static", false))
-
-	// Load and register charts
-	chartConv := chart.NewChartSet()
-	chartConv.AddPredefs(predefCharacterArray, predefCharacterOne, predefCardByCharacter)
-	if err := util.TryEach(s.Srv.Config.Charts, chartConv.Convert); err != nil {
-		return err
-	}
-	stats2 := r.Group("/stats")
-	stats2.Use(s.InjectServices)
-	for k, c := range chartConv.Charts() {
-		stats2.GET(k, c.Handle)
-	}
-
 	return nil
-}
-
-// Middleware that sets chart.CtxDb, CtxStrCache, and CtxCache to appropriate values.
-func (s *MainController) InjectServices(c *gin.Context) {
-	c.Set(chart.CtxDb, s.Srv.Pool)
-	c.Set(CtxStrCache, s.strcache)
-	c.Set(CtxCache, s.gcache)
-	c.Next()
 }
 
 func (s *MainController) GetIndex(c *gin.Context) {
@@ -135,7 +89,7 @@ func (s *MainController) PingDB(c *gin.Context) {
 }
 
 func (s *MainController) PostUploadFile(c *gin.Context) {
-	var runData stms.RunSchemaJson
+	var runData RunSchemaJson
 	// Parse file
 	mpf, err := c.FormFile("run-file")
 	if err != nil {
@@ -157,7 +111,7 @@ func (s *MainController) PostUploadFile(c *gin.Context) {
 }
 
 func (s *MainController) PostUpload(c *gin.Context) {
-	var runData stms.RunSchemaJson
+	var runData RunSchemaJson
 	// Parse data
 	if err := c.BindJSON(&runData); err != nil {
 		AbortErr(c, 400, err)
@@ -168,7 +122,7 @@ func (s *MainController) PostUpload(c *gin.Context) {
 }
 
 func (s *MainController) handleUpload(c *gin.Context) {
-	runData := c.MustGet(ctxRunData).(stms.RunSchemaJson)
+	runData := c.MustGet(ctxRunData).(RunSchemaJson)
 	// Check it's not a duplicate
 	// TODO
 	// Store in file for later
@@ -191,7 +145,7 @@ func (s *MainController) handleUpload(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Thank you!"})
 }
 
-func (s *MainController) saveRun(c *gin.Context, data *stms.RunSchemaJson) {
+func (s *MainController) saveRun(c *gin.Context, data *RunSchemaJson) {
 	wr, err := os.Create(path.Join(s.Srv.Config.RunsDir, data.PlayId.String()+".run.gz"))
 	if err != nil {
 		c.Error(err)
@@ -204,8 +158,4 @@ func (s *MainController) saveRun(c *gin.Context, data *stms.RunSchemaJson) {
 		c.Error(err)
 		return
 	}
-}
-
-func AbortErr(c *gin.Context, code int, err error) {
-	c.AbortWithStatusJSON(code, c.Error(err).JSON())
 }

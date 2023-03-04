@@ -10,16 +10,17 @@ services:
     - POSTGRES_PASSWORD
     shm_size: 256MB
     command: -c fsync=off
-  jupyter:
-    image: jupyter/scipy-notebook
+  stats:
+    image: sts-stats:latest
+    build: ./stats
     ports:
-    - "8888:8888"
+      - "8501:8501"
     environment:
-    - POSTGRES_PASSWORD
-    volumes:
-    - C:/Users/bindernews/Projects/sts-metrics/:/home/jovyan/work
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_HOST=database:5432
     links:
-    - "db:database"
+      - "db:database"
 
 volumes:
   db-data:

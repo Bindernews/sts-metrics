@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os"
 
-	"github.com/bindernews/sts-msr/util"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	csrf "github.com/utrack/gin-csrf"
@@ -96,12 +95,12 @@ func (s *Controller) LoginRedirect(c *gin.Context) {
 
 	// Read provider
 	if err := c.BindQuery(&params); err != nil {
-		util.AbortErr(c, 400, ErrBadRequest)
+		AbortErr(c, 400, ErrBadRequest)
 		return
 	}
 
 	// If user is already logged in skip login
-	if util.SessGetString(sess, KeyUserEmail) != "" {
+	if SessGetString(sess, KeyUserEmail) != "" {
 		url = s.getNextUrl(sess)
 	} else {
 		sess.Set(keyOauthKind, params.Kind)
@@ -129,18 +128,18 @@ func (s *Controller) GetRedirect(c *gin.Context) {
 	sess := sessions.Default(c)
 	// Read params
 	if err := c.BindQuery(&params); err != nil {
-		util.AbortErr(c, 400, err)
+		AbortErr(c, 400, err)
 		return
 	}
 	// csrf check
 	if params.State != csrf.GetToken(c) {
-		util.AbortErr(c, 403, ErrBadCsrf)
+		AbortErr(c, 403, ErrBadCsrf)
 		return
 	}
 	// Get provider
-	provider := s.providers[util.SessGetString(sess, keyOauthKind)]
+	provider := s.providers[SessGetString(sess, keyOauthKind)]
 	if provider == nil {
-		util.AbortErr(c, 403, ErrSessionExpired)
+		AbortErr(c, 403, ErrSessionExpired)
 		return
 	}
 	// Obtain the real token
@@ -148,13 +147,13 @@ func (s *Controller) GetRedirect(c *gin.Context) {
 	if err != nil || token == nil {
 		// Log the error
 		c.Error(err)
-		util.AbortErr(c, 403, ErrAuthFailed)
+		AbortErr(c, 403, ErrAuthFailed)
 		return
 	}
 	// Get email
 	email, err := provider.GetEmail(ctx, token)
 	if err != nil {
-		util.AbortErr(c, 403, err)
+		AbortErr(c, 403, err)
 		return
 	}
 
@@ -169,7 +168,7 @@ func (s *Controller) GetRedirect(c *gin.Context) {
 // Make sure to call sess.Save()
 func (s *Controller) getNextUrl(sess sessions.Session) string {
 	// Get the redirect URL and then clear it
-	nextUrl := util.SessGetString(sess, KeyRedirectUrl)
+	nextUrl := SessGetString(sess, KeyRedirectUrl)
 	if nextUrl == "" {
 		nextUrl = s.HomeUrl
 	}
@@ -210,7 +209,7 @@ func NewGithubProvider(opts ProviderOpts) *Provider {
 		emailsOut := []EmailRes{}
 
 		// Request the user's emails from github, then parse the response
-		ezreq := util.EzHttpRequest{
+		ezreq := EzHttpRequest{
 			Method: "GET",
 			Url:    "https://api.github.com/user/emails",
 			Headers: gin.H{
