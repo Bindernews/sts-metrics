@@ -317,6 +317,9 @@ type RunSchemaJson struct {
 	// CurrentHpPerFloor corresponds to the JSON schema field "current_hp_per_floor".
 	CurrentHpPerFloor []float64 `json:"current_hp_per_floor" yaml:"current_hp_per_floor"`
 
+	// List of modifiers for daily runs, only found if is_daily is true
+	DailyMods []string `json:"daily_mods,omitempty" yaml:"daily_mods,omitempty"`
+
 	// List of DamageTaken events
 	DamageTaken []DamageTaken `json:"damage_taken" yaml:"damage_taken"`
 
@@ -339,13 +342,13 @@ type RunSchemaJson struct {
 	IsBeta bool `json:"is_beta" yaml:"is_beta"`
 
 	// IsDaily corresponds to the JSON schema field "is_daily".
-	IsDaily bool `json:"is_daily" yaml:"is_daily"`
+	IsDaily bool `json:"is_daily,omitempty" yaml:"is_daily,omitempty"`
 
 	// Is Endless mode
 	IsEndless bool `json:"is_endless" yaml:"is_endless"`
 
 	// IsProd corresponds to the JSON schema field "is_prod".
-	IsProd bool `json:"is_prod" yaml:"is_prod"`
+	IsProd bool `json:"is_prod,omitempty" yaml:"is_prod,omitempty"`
 
 	// Is this a custom trial run
 	IsTrial bool `json:"is_trial" yaml:"is_trial"`
@@ -424,6 +427,9 @@ type RunSchemaJson struct {
 	// "seed_source_timestamp".
 	SeedSourceTimestamp int `json:"seed_source_timestamp" yaml:"seed_source_timestamp"`
 
+	// bitwise OR of special run modifiers
+	SpecialSeed float64 `json:"special_seed,omitempty" yaml:"special_seed,omitempty"`
+
 	// Timestamp corresponds to the JSON schema field "timestamp".
 	Timestamp int `json:"timestamp" yaml:"timestamp"`
 
@@ -432,6 +438,8 @@ type RunSchemaJson struct {
 
 	// WinRate corresponds to the JSON schema field "win_rate".
 	WinRate float64 `json:"win_rate" yaml:"win_rate"`
+	// Additional fields
+	Extra map[string]any
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -583,6 +591,9 @@ func (j *RunSchemaJson) UnmarshalJSON(b []byte) error {
 	if v, ok := raw["seed_source_timestamp"]; !ok || v == nil {
 		plain.SeedSourceTimestamp = 0
 	}
+	if v, ok := raw["special_seed"]; !ok || v == nil {
+		plain.SpecialSeed = 0
+	}
 	if v, ok := raw["timestamp"]; !ok || v == nil {
 		plain.Timestamp = 0
 	}
@@ -592,6 +603,7 @@ func (j *RunSchemaJson) UnmarshalJSON(b []byte) error {
 	if v, ok := raw["win_rate"]; !ok || v == nil {
 		plain.WinRate = 0
 	}
+	plain.Extra = extProcessRaw(raw)
 	*j = RunSchemaJson(plain)
 	return nil
 }

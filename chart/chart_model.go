@@ -38,6 +38,8 @@ type TabularColumn struct {
 type ChartTemplate struct {
 	// Page title
 	Title string
+	// Chart type
+	Type string
 	// Raw HTML to include in the <head>
 	Head template.HTML
 	// JSON chart options

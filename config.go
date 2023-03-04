@@ -13,7 +13,12 @@ import (
 
 type Config struct {
 	// Set of IP addresses/ports to listen on
-	Listen []string `toml:"listen"`
+	Listen string `toml:"listen"`
+	// Set of IP addresses/ports for the admin interface to listen on
+	AdminListen string `toml:"admin_listen"`
+	// Runs in release mode by default, unless this is true in which case
+	// gin is run in debug mode.
+	DebugMode bool `toml:"debug_mode"`
 	// SQL section of the config
 	Sql ConfigSql `toml:"sql"`
 	// Directory where runs are stored

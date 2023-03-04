@@ -1,8 +1,7 @@
-package stsweb
+package web
 
 import (
 	"compress/gzip"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +9,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	_ "golang.org/x/oauth2"
 
@@ -21,6 +21,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4"
+	"github.com/patrickmn/go-cache"
 )
 
 // Generic unauthorized error
@@ -30,21 +31,52 @@ var ErrUnauthorized = errors.New("unauthorized")
 var ErrUnknownChart = errors.New("unknown chart")
 var ErrRunAlreadyUploaded = errors.New("run already uploaded")
 
+// Character predef
+var (
+	predefCharacterArray = chart.NewEnumParam(
+		"Character(s)",
+		"character_a",
+		"SELECT name FROM character_list",
+		true,
+		true,
+	)
+	predefCharacterOne = chart.NewEnumParam(
+		"Character",
+		"character",
+		"SELECT name FROM character_list",
+		false,
+		false,
+	)
+	predefCardByCharacter = chart.NewEnumParam(
+		"Card",
+		"char_card",
+		"",
+		false,
+		false,
+	)
+)
+
 const (
 	// gin Context key for the user's email
 	CtxEmail = "Email"
 	// gin context key for the string cache
 	CtxStrCache = "StrCache"
+	// gin context key for the go-cache instance
+	CtxCache = "gocache"
+	// key for the run data
+	ctxRunData = "run-data"
 )
 
 type MainController struct {
 	Srv      *Services
 	strcache util.StrCache
+	gcache   *cache.Cache
 }
 
 func (s *MainController) Init(r *gin.Engine) error {
 	db := orm.New(s.Srv.Pool)
 	s.strcache = util.NewStrCache(db.StrCacheToId, db.StrCacheAdd)
+	s.gcache = cache.New(5*time.Minute, 10*time.Minute)
 
 	r.Use(sessions.Sessions("main", s.Srv.SeStore))
 	r.SetFuncMap(sprig.FuncMap())
@@ -55,36 +87,35 @@ func (s *MainController) Init(r *gin.Engine) error {
 
 	// Register main routes
 	r.RouterGroup.
-		POST("/upload", s.PostUpload).
+		POST("/upload", s.PostUpload, s.handleUpload).
+		POST("/upload-file", s.PostUploadFile, s.handleUpload).
 		GET("/pingdb", s.PingDB).
-		GET("/test1", s.Test1).
 		GET("/", s.Srv.CtxSetEmail(), s.GetIndex)
 
 	// Serve static files
 	r.StaticFS("/static", gin.Dir("static", false))
 
 	// Load and register charts
-	chartConv := new(chart.ConvertContext)
-	chartConv.Init()
-	chartConv.Predefs["character"] = chart.NewEnumParam(
-		"Character",
-		"character",
-		"SELECT name FROM character_list",
-		true,
-	)
-	if err := util.TryEach(s.Srv.Config.Charts, chartConv.Add); err != nil {
+	chartConv := chart.NewChartSet()
+	chartConv.AddPredefs(predefCharacterArray, predefCharacterOne, predefCardByCharacter)
+	if err := util.TryEach(s.Srv.Config.Charts, chartConv.Convert); err != nil {
 		return err
 	}
-	stats2 := r.Group("/stats2")
-	stats2.Use(func(c *gin.Context) {
-		c.Set(chart.CtxDb, s.Srv.Pool)
-		c.Next()
-	})
-	for k, c := range chartConv.Charts {
+	stats2 := r.Group("/stats")
+	stats2.Use(s.InjectServices)
+	for k, c := range chartConv.Charts() {
 		stats2.GET(k, c.Handle)
 	}
 
 	return nil
+}
+
+// Middleware that sets chart.CtxDb, CtxStrCache, and CtxCache to appropriate values.
+func (s *MainController) InjectServices(c *gin.Context) {
+	c.Set(chart.CtxDb, s.Srv.Pool)
+	c.Set(CtxStrCache, s.strcache)
+	c.Set(CtxCache, s.gcache)
+	c.Next()
 }
 
 func (s *MainController) GetIndex(c *gin.Context) {
@@ -103,26 +134,26 @@ func (s *MainController) PingDB(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "success"})
 }
 
-func (s *MainController) Test1(c *gin.Context) {
-	rows, err := s.Srv.Pool.Query(
-		context.Background(),
-		`SELECT row_to_json(stats_overview.*) FROM stats_overview WHERE "name" = $1`,
-		"GRACKLE",
-	)
+func (s *MainController) PostUploadFile(c *gin.Context) {
+	var runData stms.RunSchemaJson
+	// Parse file
+	mpf, err := c.FormFile("run-file")
 	if err != nil {
-		AbortErr(c, 500, err)
+		AbortErr(c, 400, err)
 		return
 	}
-	data := make([]any, 0)
-	for rows.Next() {
-		if r, err := rows.Values(); err != nil {
-			AbortErr(c, 500, err)
-			return
-		} else {
-			data = append(data, r)
-		}
+	fd, err := mpf.Open()
+	if err != nil {
+		AbortErr(c, 400, err)
+		return
 	}
-	c.JSON(200, data)
+	defer fd.Close()
+	if err := json.NewDecoder(fd).Decode(&runData); err != nil {
+		AbortErr(c, 400, err)
+		return
+	}
+	c.Set(ctxRunData, runData)
+	c.Next()
 }
 
 func (s *MainController) PostUpload(c *gin.Context) {
@@ -132,6 +163,12 @@ func (s *MainController) PostUpload(c *gin.Context) {
 		AbortErr(c, 400, err)
 		return
 	}
+	c.Set(ctxRunData, runData)
+	c.Next()
+}
+
+func (s *MainController) handleUpload(c *gin.Context) {
+	runData := c.MustGet(ctxRunData).(stms.RunSchemaJson)
 	// Check it's not a duplicate
 	// TODO
 	// Store in file for later
@@ -156,7 +193,7 @@ func (s *MainController) PostUpload(c *gin.Context) {
 
 func (s *MainController) saveRun(c *gin.Context, data *stms.RunSchemaJson) {
 	wr, err := os.Create(path.Join(s.Srv.Config.RunsDir, data.PlayId.String()+".run.gz"))
-	if err == nil {
+	if err != nil {
 		c.Error(err)
 		return
 	}

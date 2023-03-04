@@ -1,4 +1,4 @@
-package stsweb
+package web
 
 import (
 	"context"
@@ -27,7 +27,6 @@ func (s *StatsView) AddChart(name string, fn gin.HandlerFunc) {
 func (s *StatsView) DefaultCharts() *StatsView {
 	dv := &DefaultViews{}
 	s.AddChart("overview", s.Wrap(dv.OverviewView))
-	s.AddChart("characters", s.Wrap(dv.ListCharacters))
 	return s
 }
 
@@ -109,22 +108,6 @@ func (*DefaultViews) OverviewView(c *gin.Context, qq *orm.Queries) error {
 		IsTable: true,
 	}
 	c.HTML(200, "chartview.html", tmpl)
-	return nil
-}
-
-func (*DefaultViews) ListCharacters(c *gin.Context, qq *orm.Queries) (err error) {
-	var rows []orm.CharacterList
-	ctx := c.Request.Context()
-	if rows, err = qq.StatsListCharacters(ctx); err != nil {
-		return
-	}
-	tmpl := StatsTableTempl{
-		Headers: []string{"ID", "Name"},
-		Rows: lo.Map(rows, func(r orm.CharacterList, _ int) []any {
-			return []any{fmt.Sprint(r.ID), r.Name}
-		}),
-	}
-	c.HTML(200, "chart_table.html", tmpl)
 	return nil
 }
 

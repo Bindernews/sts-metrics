@@ -32,8 +32,6 @@
       "current_hp_per_floor",
       "gold",
       "neow_bonus",
-      "is_prod",
-      "is_daily",
       "chose_seed",
       "campfire_upgraded",
       "win_rate",
@@ -56,6 +54,17 @@
       "ascension_level"
   ],
   "properties": {
+      "special_seed": {
+        "type": "number",
+        "format": "int",
+        "default": 0,
+        "description": "bitwise OR of special run modifiers"
+      },
+      "daily_mods": {
+        "type": "array",
+        "description": "List of modifiers for daily runs, only found if is_daily is true",
+        "items": { "type": "string" }
+      },
       "gold_per_floor": {
           "type": "array",
           "title": "gold_per_floor",
@@ -405,6 +414,7 @@
           "description": "The Ascension level (0 - 20) TODO - does this appear on 0 ascension?"
       }
   },
+  "additionalProperties": true,
   "examples": [{
       "gold_per_floor": [
           115,

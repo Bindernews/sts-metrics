@@ -9,6 +9,7 @@ services:
     environment:
     - POSTGRES_PASSWORD
     shm_size: 256MB
+    command: -c fsync=off
   jupyter:
     image: jupyter/scipy-notebook
     ports:

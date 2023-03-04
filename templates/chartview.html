@@ -14,6 +14,8 @@
     {{if .IsTable}}
       <div id="table"></div>
       <script async type="text/javascript" src="https://unpkg.com/tabulator-tables@5.4.4/dist/js/tabulator.min.js"></script>
+    {{else if eq .Type "raw"}}
+      <code><pre id="raw"></pre></code>
     {{else}}
       <canvas id="chartc"></canvas>
       <script async src="https://cdn.jsdelivr.net/npm/chart.js"></script>

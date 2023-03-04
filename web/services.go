@@ -1,4 +1,4 @@
-package stsweb
+package web
 
 import (
 	"context"

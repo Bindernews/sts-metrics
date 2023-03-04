@@ -3,7 +3,6 @@ package chart
 import (
 	"errors"
 	"fmt"
-	"strings"
 )
 
 var ErrUnknownPredef = errors.New("unknown query predef - ")
@@ -17,25 +16,45 @@ const (
 )
 
 // Context for converting config data to parsed the in-memory representation.
-type ConvertContext struct {
+type ChartSet struct {
 	// Map of predef names to query parameters
-	Predefs map[string]IQueryParam
+	predefs map[string]IQueryParam
 	// Map of chart names to converted charts
-	Charts map[string]*ChartSpec
+	charts map[string]*ChartSpec
 }
 
-func (cx *ConvertContext) Init() {
-	cx.Predefs = make(map[string]IQueryParam)
-	cx.Charts = make(map[string]*ChartSpec)
+func NewChartSet() *ChartSet {
+	cx := new(ChartSet)
+	cx.predefs = make(map[string]IQueryParam)
+	cx.charts = make(map[string]*ChartSpec)
+	return cx
 }
 
-func (cx *ConvertContext) Add(data ChartToml) error {
+func (cx *ChartSet) Predefs() map[string]IQueryParam {
+	return cx.predefs
+}
+func (cx *ChartSet) Charts() map[string]*ChartSpec {
+	return cx.charts
+}
+
+func (cx *ChartSet) AddPredefs(params ...IQueryParam) {
+	predefs := cx.Predefs()
+	for _, q := range params {
+		predefs[q.Name()] = q
+	}
+}
+
+func (cx *ChartSet) Convert(data ChartToml) error {
 	spec, err := data.ToChartSpec(cx)
 	if err != nil {
 		return err
 	}
-	cx.Charts[spec.Path] = spec
+	cx.Add(spec)
 	return nil
+}
+
+func (cx *ChartSet) Add(spec *ChartSpec) {
+	cx.charts[spec.Path()] = spec
 }
 
 type ChartToml struct {
@@ -54,7 +73,7 @@ type ChartToml struct {
 	Columns []TabularColumn `toml:"columns" json:"columns"`
 }
 
-func (c ChartToml) ToChartSpec(cx *ConvertContext) (*ChartSpec, error) {
+func (c ChartToml) ToChartSpec(cx *ChartSet) (*ChartSpec, error) {
 	params := make([]IQueryParam, len(c.Params))
 	for i, p := range c.Params {
 		qp, err := p.ToQueryParam(cx)
@@ -63,14 +82,12 @@ func (c ChartToml) ToChartSpec(cx *ConvertContext) (*ChartSpec, error) {
 		}
 		params[i] = qp
 	}
-	path := strings.ToLower(c.Name)
 	s := ChartSpec{
-		Name:          c.Name,
-		Path:          path,
-		Params:        params,
-		Sql:           c.Sql,
-		Type:          string(c.Type),
-		TransformCode: c.Transformer,
+		Name:      c.Name,
+		Params:    params,
+		Sql:       c.Sql,
+		Type:      string(c.Type),
+		Transform: c.Transformer,
 	}
 	switch c.Type {
 	case ChartTable:
@@ -97,10 +114,10 @@ type ParamToml struct {
 	TextRegex string `toml:"text_regex" json:"text_regex"`
 }
 
-func (p ParamToml) ToQueryParam(cx *ConvertContext) (IQueryParam, error) {
+func (p ParamToml) ToQueryParam(cx *ChartSet) (IQueryParam, error) {
 	// Check for predef
 	if p.Def != "" {
-		if def, ok := cx.Predefs[p.Def]; ok {
+		if def, ok := cx.Predefs()[p.Def]; ok {
 			return def, nil
 		} else {
 			return nil, fmt.Errorf("%w %s", ErrUnknownPredef, p.Def)

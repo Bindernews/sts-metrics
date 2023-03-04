@@ -10,6 +10,7 @@ require (
 	github.com/jackc/pgconn v1.13.0
 	github.com/jackc/pgx/v4 v4.17.2
 	github.com/joho/godotenv v1.5.1
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pelletier/go-toml/v2 v2.0.6
 	github.com/samber/lo v1.37.0
 	github.com/utrack/gin-csrf v0.0.0-20190424104817-40fb8d2c8fca

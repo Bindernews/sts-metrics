@@ -1,16 +1,16 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 
+	"github.com/bindernews/sts-msr/web"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-
-	stms "github.com/bindernews/sts-msr"
-	"github.com/bindernews/sts-msr/tonoauth"
 )
 
 const usage = `Usage of %s:
@@ -39,38 +39,59 @@ func main() {
 	}
 	flag.Parse()
 
-	srv := new(stms.Services)
+	srv := new(web.Services)
 	r := gin.Default()
 	if err := setup(srv, r); err != nil {
 		log.Fatalln(err)
 	}
-	if err := r.Run(srv.Config.Listen...); err != nil {
+
+	server := &http.Server{
+		Addr:    srv.Config.Listen,
+		Handler: r,
+	}
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			log.Fatalln(err)
+		}
+	}()
+
+	adminRouter := gin.Default()
+	adminRouter.POST("/stop", func(c *gin.Context) {
+		server.Shutdown(context.Background())
+	})
+	if err := adminRouter.Run(srv.Config.AdminListen); err != nil {
 		log.Fatalln(err)
 	}
 }
 
-func setup(srv *stms.Services, r *gin.Engine) (err error) {
+func setup(srv *web.Services, r *gin.Engine) (err error) {
 	if err = srv.LoadDefaults(); err != nil {
 		return
 	}
 	if err = srv.Config.LoadFile(*optConfig, false); err != nil {
 		return
 	}
-	ctrlMain := stms.MainController{Srv: srv}
+	if srv.Config.DebugMode {
+		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	ctrlMain := web.MainController{Srv: srv}
 	if err = ctrlMain.Init(r); err != nil {
 		return
 	}
 	// Setup the oauth controller, we can support multiple oauth
-	ctrlOauth := tonoauth.NewOauthController(os.Getenv("BASE_URL"))
+	ctrlOauth := web.NewOauthController(os.Getenv("BASE_URL"))
 	ctrlOauth.AddProviders(
-		tonoauth.NewGithubProvider(tonoauth.NewProviderOptsFromEnv("GH_")))
+		web.NewGithubProvider(web.NewProviderOptsFromEnv("GH_")))
 	if err = ctrlOauth.Init(r); err != nil {
 		return
 	}
 	// Setup charts view
-	ctrlCharts := stms.StatsView{Srv: srv}
+	ctrlCharts := web.StatsView{Srv: srv}
 	ctrlCharts.DefaultCharts()
-	if err = ctrlCharts.Init(r.Group("/stats")); err != nil {
+	if err = ctrlCharts.Init(r.Group("/stats2")); err != nil {
 		return
 	}
 	return

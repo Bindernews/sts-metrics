@@ -1,5 +1,7 @@
-listen = ["localhost:8080"]
+listen = "localhost:8080"
+admin_listen = "localhost:8090"
 runs_dir = "data/runs"
+debug_mode = true
 
 [[chart]]
 name = "Overview"
@@ -16,7 +18,15 @@ columns = [
     { title='Deck Size (p25,p50,p75)', field="p_deck_size" },
     { title='Floor Reached (p25,p50,p75)', field='p_floor_reached' },
 ]
-transformer = '''((d) => d.map(e => e[0]))'''
+
+[[chart]]
+name = 'Character List'
+sql = '''SELECT row_to_json(CL.*) FROM character_list CL'''
+type = 'table'
+params = []
+columns = [
+    { title='Name', field='name' },
+]
 
 [[chart]]
 name = 'Card Stats'
