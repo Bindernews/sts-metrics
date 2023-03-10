@@ -27,10 +27,13 @@ type StrCache interface {
 	Get(key string) int32
 	MaybeGet(key *string) sql.NullInt32
 	GetAll(keys []string) []int32
+	RevGet(id int32) string
+	RevGetAll(id []int32) []string
 }
 
 type syncStrCache struct {
 	strs    map[string]int32
+	rev     map[int32]string
 	lock    sync.RWMutex
 	StoreFn StrStoreFn
 	LoadFn  StrLoadFn
@@ -39,6 +42,7 @@ type syncStrCache struct {
 func NewStrCache(loadFn StrLoadFn, storeFn StrStoreFn) StrCache {
 	c := syncStrCache{
 		strs:    make(map[string]int32),
+		rev:     make(map[int32]string),
 		StoreFn: storeFn,
 		LoadFn:  loadFn,
 	}
@@ -76,7 +80,9 @@ func (s *syncStrCache) Load(ctx context.Context, strings ...[]string) (err error
 	}
 	for i, v := range values {
 		s.strs[keys[i]] = v
+		s.rev[v] = keys[i]
 	}
+
 	return nil
 }
 
@@ -100,4 +106,20 @@ func (s *syncStrCache) GetAll(keys []string) []int32 {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 	return lo.Map(keys, func(k string, _ int) int32 { return s.strs[k] })
+}
+
+func (s *syncStrCache) RevGet(id int32) string {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	return s.rev[id]
+}
+
+func (s *syncStrCache) RevGetAll(keys []int32) []string {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	out := make([]string, len(keys))
+	for i, k := range keys {
+		out[i] = s.rev[k]
+	}
+	return out
 }

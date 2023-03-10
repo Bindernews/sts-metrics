@@ -72,16 +72,8 @@ func setup(srv *web.Services, r *gin.Engine) (err error) {
 	if err = srv.Config.LoadFile(*optConfig, false); err != nil {
 		return
 	}
-
 	ctrlMain := web.MainController{Srv: srv}
 	if err = ctrlMain.Init(r); err != nil {
-		return
-	}
-	// Setup the oauth controller, we can support multiple oauth
-	ctrlOauth := web.NewOauthController(os.Getenv("BASE_URL"))
-	ctrlOauth.AddProviders(
-		web.NewGithubProvider(web.NewProviderOptsFromEnv("GH_")))
-	if err = ctrlOauth.Init(r); err != nil {
 		return
 	}
 	return

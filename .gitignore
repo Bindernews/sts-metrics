@@ -1,6 +1,6 @@
 .idea/
 .vscode/
-data/runs/
-.ipynb_checkpoints/
-sql/tern.conf
+data/
+tern.conf
 .env
+__pycache__

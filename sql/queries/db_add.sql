@@ -20,7 +20,7 @@ INSERT INTO RunFlags (run_id, flag) VALUES ($1, $2);
 -- name: AddCampfire :copyfrom
 INSERT INTO CampfireChoice (run_id, "data", floor, "key") VALUES ($1,$2,$3,$4);
 -- name: AddDamageTaken :copyfrom
-INSERT INTO DamageTaken (run_id, enemies, floor, turns) VALUES ($1,$2,$3,$4);
+INSERT INTO DamageTaken (run_id, enemies, damage, floor, turns) VALUES ($1,$2,$3,$4,$5);
 -- name: AddCardChoice :copyfrom
 INSERT INTO CardChoices (run_id, floor, not_picked, picked) VALUES ($1,$2,$3,$4);
 -- name: AddRelicObtain :copyfrom
@@ -42,8 +42,8 @@ INSERT INTO PerFloorData (run_id, floor, gold, current_hp, max_hp) VALUES ($1,$2
 -- name: AddRunArrays :copyfrom
 INSERT INTO RunArrays
     (run_id, daily_mods, items_purchased_floors, items_purchased_ids, items_purged_floors, items_purged_ids,
-     potions_floor_spawned, potions_floor_usage)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8);
+     potions_floor_spawned, potions_floor_usage, relic_ids)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9);
 -- name: AddRunsExtra :exec
 INSERT INTO runs_extra (run_id, extra) VALUES ($1,$2);
 
@@ -55,12 +55,14 @@ SELECT str_cache_add($1::text[]);
 -- name: StrCacheToId :many
 SELECT str_cache_to_id($1::text[]);
 
--- name: GetCampfires :many
-SELECT CC.id, CC.data, CC.floor, StrCache.str as "key" FROM CampfireChoice CC
-    LEFT JOIN StrCache ON CC.key = StrCache.id
-    WHERE CC.id = $1
-    ORDER BY floor;
+-- name: RunToJson :one
+SELECT r.raw::json, r.path_per_floor::text, r.path_taken::text, r.extra::json
+FROM run_to_json((SELECT id FROM runsdata WHERE play_id = $1)) r;
 
-
-
+-- name: ArchiveBegin :many
+UPDATE rawjsonarchive ra SET status = $1 WHERE status = 0 RETURNING ra.*;
+-- name: ArchiveComplete :many
+UPDATE rawjsonarchive ra SET status = -1 WHERE status = $1 RETURNING ra.id;
+-- name: ArchiveAdd :exec
+INSERT INTO RawJsonArchive(bdata, play_id) VALUES ($1, $2);
 

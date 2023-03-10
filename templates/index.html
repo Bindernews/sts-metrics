@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <html>
+<head>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
+</head>
 <body>
   {{ if .Email }}
     <p>You are logged in as {{.Email}}</p>
@@ -12,7 +15,26 @@
   </ul>
   <form method="POST" action="/upload-file" enctype="multipart/form-data">
     Upload: <input id="run-file" type="file" name="run-file" />
-    <input type="submit" />
+    <input id="run-submit" type="submit" />
   </form>
+  <script type="text/javascript">
+    $('#run-submit').submit(e => {
+      Promise.resolve($('#run-file'))
+        .then(elem => elem.files[0].text())
+        .then(content => {
+          return fetch('/upload', {
+            method: 'POST',
+            headers: { "Content-Type": 'application/json', },
+            body: content,
+          })
+        })
+        .then(response => {
+          console.log(response);
+        })
+        .catch(err => {
+          console.log(err);
+        });
+    })
+  </script>
 </body>
 </html>

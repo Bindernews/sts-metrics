@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS scopes(
 );
 
 CREATE TABLE IF NOT EXISTS users_to_scopes(
-    user_id int not null references users(id),
-    scope_id int not null references scopes(id),
+    user_id int not null references users(id) on delete cascade ,
+    scope_id int not null references scopes(id) on delete cascade ,
     primary key (user_id, scope_id)
 );
 
@@ -28,36 +28,36 @@ CREATE OR REPLACE FUNCTION user_set_scopes(email_ text, scope_list text[]) RETUR
 LANGUAGE plpgsql AS $$
 DECLARE
     uid int;
+    scope_ids int[];
 BEGIN
     SELECT id INTO uid FROM users WHERE email = email_;
     if not FOUND then
         RAISE EXCEPTION 'user % not found', email_;
     end if;
-    CREATE TEMPORARY TABLE scope_ids ON COMMIT DROP AS
-        SELECT id FROM scopes WHERE key = ANY(scope_list);
-    if (SELECT count(id) FROM scope_ids) != array_length(scope_list, 1) then
+    SELECT array(SELECT id FROM scopes WHERE key = ANY(scope_list)) INTO scope_ids;
+    if array_length(scope_ids, 1) != array_length(scope_list, 1) then
         RAISE EXCEPTION 'one or more scopes of % are invalid', scope_list;
     end if;
     DELETE FROM users_to_scopes WHERE user_id = uid;
-    INSERT INTO users_to_scopes(user_id, scope_id) SELECT uid, scope_ids.id FROM scope_ids;
+    INSERT INTO users_to_scopes(user_id, scope_id) SELECT uid, unnest(scope_ids);
 END $$;
 
-CREATE OR REPLACE FUNCTION user_has_scopes(emaila text, scope_list text[]) RETURNS int
+CREATE OR REPLACE FUNCTION user_has_scopes(email_ text, scope_list text[]) RETURNS bool
 LANGUAGE SQL AS $$
-    WITH
-        usc AS (
-            SELECT scope_id FROM users_to_scopes
-            LEFT JOIN users u on u.id = users_to_scopes.user_id
-            WHERE u.email = emaila
-        )
-    SELECT count(usc.scope_id) FROM usc
-    LEFT JOIN scopes ON usc.scope_id = scopes.id
-    WHERE scopes.key = ANY(scope_list);
+    SELECT bool_and(scope_id is not null)
+    FROM scopes s
+        CROSS JOIN (SELECT id FROM users WHERE email = email_) uid
+        RIGHT JOIN (SELECT unnest(scope_list) t) txt ON txt.t = s.key
+        LEFT JOIN users_to_scopes uts ON s.id = uts.scope_id AND uid.id = uts.user_id
 $$;
 
 -- TEST DATA
 -- SELECT user_add({{ .test_user }});
--- insert into scopes(key, "desc") values ('stats:view', 'Ability to view statistics');
+INSERT INTO scopes(key, "desc")
+VALUES
+    ('stats:view', 'Ability to view statistics'),
+    ('getrun', 'Retrieve runs as JSON data'),
+    ('admin', 'Access the admin interface');
 -- SELECT user_set_scopes({{ .test_user }}, '{stats:view}');
 
 ---- create above / drop below ----

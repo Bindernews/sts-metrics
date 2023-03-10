@@ -3,18 +3,13 @@ import math
 import pandas as pd
 import numpy as np
 import streamlit as st
-from dotenv import load_dotenv
 import sqlalchemy as sa
-import os
-
+from common import get_db, query
 
 st.set_page_config(layout='wide')
 
 # Rows per page for paged queries
 PAGE_SIZE = 40
-
-# For development
-load_dotenv('../.env')
 
 """
 # sts-metrics Statistics Views
@@ -23,23 +18,10 @@ Made with Streamlit!
 Links: [documentation](https://docs.streamlit.io) and [community forums](https://discuss.streamlit.io).
 """
 
-@st.cache_resource
-def db_conn():
-    driver = 'postgresql+psycopg2'
-    user = os.getenv('POSTGRES_USER')
-    passw = os.getenv('POSTGRES_PASSWORD')
-    host = os.getenv('POSTGRES_HOST')
-    engine = sa.create_engine(f'{driver}://{user}:{passw}@{host}/postgres')
-    return engine.connect()
-
-def query(sql, params=[]):
-    return pd.read_sql(sa.text(sql), db_conn(), params=params)
-
-
 @st.cache_data
 def char_map() -> dict[str,int]:
     '''List of character names'''
-    df = query('select c.* from character_list c')
+    df = query(sa.text('select c.* from character_list c'))
     return dict(zip(df.name, df.id))
 
 @st.cache_data
@@ -51,13 +33,10 @@ def extra_data_row_count(character: str) -> int:
     select count(e.run_id) from runs_extra e
     inner join run_ids r on r.id = e.run_id
     ''').bindparams(char_id=char_id)
-    v = db_conn().scalar(q)
-    print(v)
-    return v
-
-def pg_array(ar: list[any]) -> str:
-    return '{'+','.join(ar)+'}'
-
+    with get_db().connect() as c:
+        v = c.scalar(q)
+        print(v)
+        return v
 
 def quartiles_to_pd(quarts: pd.DataFrame, prefix: str) -> pd.DataFrame:
     '''
@@ -79,6 +58,11 @@ with tabOverview:
         st.cache_data.clear()
         st.cache_resource.clear()
 
+    st.write(
+        '<a target="_self" href="/oauth2/sign_out">Logout</a>',
+        unsafe_allow_html=True
+    )
+
     def view_overview():
         st.header('Overview')
         char_list = char_map().keys()
@@ -88,7 +72,7 @@ with tabOverview:
         from stats_overview s
         where s.name = any(:p1 :\:text[])
         ''').bindparams(p1=chars)
-        st.table(pd.read_sql(q, db_conn()))
+        st.table(query(q))
     view_overview()
 
     def view_build_versions():
@@ -100,7 +84,7 @@ with tabOverview:
         select distinct s.str as version from strcache s
         join runsdata r on s.id = r.build_version
         ''')
-        st.table(pd.read_sql(q, db_conn()))
+        st.table(query(q))
     view_build_versions()
 
 
@@ -108,6 +92,7 @@ with tabCharacter:
     # For all per-character 
     st.markdown('## Character Choice')
     character = st.selectbox('Character', char_map().keys())
+    char_id = char_map()[character]
 
     def view_card_counts():
         '''
@@ -123,15 +108,15 @@ with tabCharacter:
         )
         select * from q1 where total > 1 order by total desc
         ''').bindparams(p1=character)
-        st.dataframe(pd.read_sql(q, db_conn()))
+        st.dataframe(query(q))
     view_card_counts()
 
     @st.cache_data
     def card_stats(character):
-        char_id = char_map()[character]
-        q = sa.text('SELECT * FROM per_character_card_stats(:char_id)')\
-            .bindparams(char_id=char_id)
-        return pd.read_sql(q, db_conn())
+        q = sa.text('''
+        SELECT * FROM per_character_card_stats(:char_id)
+        ''').bindparams(char_id=char_id)
+        return query(q)
 
     def view_card_quartiles():
         '''
@@ -156,7 +141,6 @@ with tabCharacter:
         st.markdown(view_extra_data.__doc__)
         page_max = math.ceil(extra_data_row_count(character) / PAGE_SIZE)
         page_num = st.number_input('Page', 1, page_max, step=1, key=KEYP+'page')
-        char_id = char_map()[character]
         offset = PAGE_SIZE * (page_num - 1)
         q = sa.text('''
         with run_ids as (select r.id from runsdata r where r.character_id = :char_id)
@@ -164,5 +148,24 @@ with tabCharacter:
         inner join run_ids r on r.id = e.run_id
         order by e.run_id offset :offset limit :page_size
         ''').bindparams(char_id=char_id, offset=offset, page_size=PAGE_SIZE)
-        st.dataframe(pd.read_sql(q, db_conn()))
+        st.dataframe(query(q))
     view_extra_data()
+
+
+    def view_card_chosen_bar():
+        KEYP = view_card_chosen_bar.__name__
+        st.markdown('''
+        ## Percentage of Times a Card was Chosen
+        ''')
+        q = sa.text('SELECT * FROM card_pick_stats_merged(:char_id)').bindparams(char_id=char_id)
+        df = query(q)
+        filt = st.text_input('Filter', key=KEYP+'_filter')
+        if filt != '':
+            df = df[df.card.str.contains(filt)]
+        np_pick = df['pick'].to_numpy()
+        df['percent'] = np_pick / (np_pick + df['skip'].to_numpy())
+        st.dataframe(df, use_container_width=True)
+
+        if st.checkbox('Graph', key=KEYP+'_graph'):
+            st.bar_chart(df, x='card', y='percent')
+    view_card_chosen_bar()

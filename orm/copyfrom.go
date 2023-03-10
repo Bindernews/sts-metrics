@@ -135,6 +135,7 @@ func (r iteratorForAddDamageTaken) Values() ([]interface{}, error) {
 	return []interface{}{
 		r.rows[0].RunID,
 		r.rows[0].Enemies,
+		r.rows[0].Damage,
 		r.rows[0].Floor,
 		r.rows[0].Turns,
 	}, nil
@@ -145,7 +146,7 @@ func (r iteratorForAddDamageTaken) Err() error {
 }
 
 func (q *Queries) AddDamageTaken(ctx context.Context, arg []AddDamageTakenParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"damagetaken"}, []string{"run_id", "enemies", "floor", "turns"}, &iteratorForAddDamageTaken{rows: arg})
+	return q.db.CopyFrom(ctx, []string{"damagetaken"}, []string{"run_id", "enemies", "damage", "floor", "turns"}, &iteratorForAddDamageTaken{rows: arg})
 }
 
 // iteratorForAddEventChoices implements pgx.CopyFromSource.
@@ -354,6 +355,7 @@ func (r iteratorForAddRunArrays) Values() ([]interface{}, error) {
 		r.rows[0].ItemsPurgedIds,
 		r.rows[0].PotionsFloorSpawned,
 		r.rows[0].PotionsFloorUsage,
+		r.rows[0].RelicIds,
 	}, nil
 }
 
@@ -362,5 +364,5 @@ func (r iteratorForAddRunArrays) Err() error {
 }
 
 func (q *Queries) AddRunArrays(ctx context.Context, arg []AddRunArraysParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"runarrays"}, []string{"run_id", "daily_mods", "items_purchased_floors", "items_purchased_ids", "items_purged_floors", "items_purged_ids", "potions_floor_spawned", "potions_floor_usage"}, &iteratorForAddRunArrays{rows: arg})
+	return q.db.CopyFrom(ctx, []string{"runarrays"}, []string{"run_id", "daily_mods", "items_purchased_floors", "items_purchased_ids", "items_purged_floors", "items_purged_ids", "potions_floor_spawned", "potions_floor_usage", "relic_ids"}, &iteratorForAddRunArrays{rows: arg})
 }

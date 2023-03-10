@@ -35,6 +35,7 @@ type AddCardChoiceParams struct {
 type AddDamageTakenParams struct {
 	RunID   int32
 	Enemies int32
+	Damage  float32
 	Floor   int32
 	Turns   int32
 }
@@ -81,13 +82,13 @@ type AddPerFloorParams struct {
 
 type AddPotionObtainParams struct {
 	RunID int32
-	Floor int32
+	Floor int16
 	Key   int32
 }
 
 type AddRelicObtainParams struct {
 	RunID int32
-	Floor int32
+	Floor int16
 	Key   int32
 }
 
@@ -100,6 +101,7 @@ type AddRunArraysParams struct {
 	ItemsPurgedIds       []int32
 	PotionsFloorSpawned  []int32
 	PotionsFloorUsage    []int32
+	RelicIds             []int32
 }
 
 const addRunRaw = `-- name: AddRunRaw :one
@@ -191,45 +193,38 @@ func (q *Queries) AddRunsExtra(ctx context.Context, arg AddRunsExtraParams) erro
 	return err
 }
 
-const doesRunExist = `-- name: DoesRunExist :one
-SELECT count(id)::boolean FROM RunsData R WHERE R.play_id = $1
+const archiveAdd = `-- name: ArchiveAdd :exec
+INSERT INTO RawJsonArchive(bdata, play_id) VALUES ($1, $2)
 `
 
-func (q *Queries) DoesRunExist(ctx context.Context, playID string) (bool, error) {
-	row := q.db.QueryRow(ctx, doesRunExist, playID)
-	var column_1 bool
-	err := row.Scan(&column_1)
-	return column_1, err
+type ArchiveAddParams struct {
+	Bdata  pgtype.JSON
+	PlayID string
 }
 
-const getCampfires = `-- name: GetCampfires :many
-SELECT CC.id, CC.data, CC.floor, StrCache.str as "key" FROM CampfireChoice CC
-    LEFT JOIN StrCache ON CC.key = StrCache.id
-    WHERE CC.id = $1
-    ORDER BY floor
+func (q *Queries) ArchiveAdd(ctx context.Context, arg ArchiveAddParams) error {
+	_, err := q.db.Exec(ctx, archiveAdd, arg.Bdata, arg.PlayID)
+	return err
+}
+
+const archiveBegin = `-- name: ArchiveBegin :many
+UPDATE rawjsonarchive ra SET status = $1 WHERE status = 0 RETURNING ra.id, ra.bdata, ra.play_id, ra.status
 `
 
-type GetCampfiresRow struct {
-	ID    int32
-	Data  sql.NullInt32
-	Floor int32
-	Key   sql.NullString
-}
-
-func (q *Queries) GetCampfires(ctx context.Context, id int32) ([]GetCampfiresRow, error) {
-	rows, err := q.db.Query(ctx, getCampfires, id)
+func (q *Queries) ArchiveBegin(ctx context.Context, status int16) ([]Rawjsonarchive, error) {
+	rows, err := q.db.Query(ctx, archiveBegin, status)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetCampfiresRow
+	var items []Rawjsonarchive
 	for rows.Next() {
-		var i GetCampfiresRow
+		var i Rawjsonarchive
 		if err := rows.Scan(
 			&i.ID,
-			&i.Data,
-			&i.Floor,
-			&i.Key,
+			&i.Bdata,
+			&i.PlayID,
+			&i.Status,
 		); err != nil {
 			return nil, err
 		}
@@ -239,6 +234,41 @@ func (q *Queries) GetCampfires(ctx context.Context, id int32) ([]GetCampfiresRow
 		return nil, err
 	}
 	return items, nil
+}
+
+const archiveComplete = `-- name: ArchiveComplete :many
+UPDATE rawjsonarchive ra SET status = -1 WHERE status = $1 RETURNING ra.id
+`
+
+func (q *Queries) ArchiveComplete(ctx context.Context, status int16) ([]int32, error) {
+	rows, err := q.db.Query(ctx, archiveComplete, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int32
+	for rows.Next() {
+		var id int32
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const doesRunExist = `-- name: DoesRunExist :one
+SELECT count(id)::boolean FROM RunsData R WHERE R.play_id = $1
+`
+
+func (q *Queries) DoesRunExist(ctx context.Context, playID string) (bool, error) {
+	row := q.db.QueryRow(ctx, doesRunExist, playID)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const getRun = `-- name: GetRun :one
@@ -289,6 +319,30 @@ func (q *Queries) GetStr(ctx context.Context, str string) (int32, error) {
 	var id int32
 	err := row.Scan(&id)
 	return id, err
+}
+
+const runToJson = `-- name: RunToJson :one
+SELECT r.raw::json, r.path_per_floor::text, r.path_taken::text, r.extra::json
+FROM run_to_json((SELECT id FROM runsdata WHERE play_id = $1)) r
+`
+
+type RunToJsonRow struct {
+	RRaw          pgtype.JSON
+	RPathPerFloor string
+	RPathTaken    string
+	RExtra        pgtype.JSON
+}
+
+func (q *Queries) RunToJson(ctx context.Context, playID string) (RunToJsonRow, error) {
+	row := q.db.QueryRow(ctx, runToJson, playID)
+	var i RunToJsonRow
+	err := row.Scan(
+		&i.RRaw,
+		&i.RPathPerFloor,
+		&i.RPathTaken,
+		&i.RExtra,
+	)
+	return i, err
 }
 
 const strCacheAdd = `-- name: StrCacheAdd :exec

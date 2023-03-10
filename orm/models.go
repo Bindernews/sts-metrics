@@ -63,6 +63,7 @@ type Bossrelic struct {
 	RunID     int32
 	NotPicked []int32
 	Picked    int32
+	Ord       int16
 }
 
 type Campfirechoice struct {
@@ -90,6 +91,7 @@ type Damagetaken struct {
 	ID      int32
 	RunID   int32
 	Enemies int32
+	Damage  float32
 	Floor   int32
 	Turns   int32
 }
@@ -125,14 +127,21 @@ type Perfloordatum struct {
 type Potionobtain struct {
 	ID    int32
 	RunID int32
-	Floor int32
+	Floor int16
 	Key   int32
+}
+
+type Rawjsonarchive struct {
+	ID     int32
+	Bdata  pgtype.JSON
+	PlayID string
+	Status int16
 }
 
 type Relicobtain struct {
 	ID    int32
 	RunID int32
-	Floor int32
+	Floor int16
 	Key   int32
 }
 
@@ -145,6 +154,7 @@ type Runarray struct {
 	ItemsPurgedIds       []int32
 	PotionsFloorSpawned  []int32
 	PotionsFloorUsage    []int32
+	RelicIds             []int32
 }
 
 type Runflag struct {

@@ -75,6 +75,40 @@ FROM ca
 GROUP BY ca.card_id, ca.str
 $$;
 
+CREATE FUNCTION card_pick_stats_base(char_id int) RETURNS
+    TABLE(card text, pick int, skip int)
+LANGUAGE SQL AS $$
+    with cc as (select c.id, c.not_picked, c.picked
+                from cardchoices c
+                         inner join runsdata r on r.id = c.run_id
+                where r.character_id = char_id),
+         c_not as (select np.id, count(np.id) n
+                   from (select unnest(cc.not_picked) id from cc) np
+                   group by np.id),
+         c_pick as (select cc.picked as id, count(cc.picked) n
+                    from cc
+                    group by cc.picked)
+    select s.str                 as card,
+           coalesce(c_pick.n, 0) as pick,
+           c_not.n               as skip
+    from c_not
+             full join c_pick on c_not.id = c_pick.id
+             join strcache s on s.id = c_not.id;
+$$;
+
+CREATE FUNCTION card_pick_stats_merged(char_id int) RETURNS
+    TABLE(card text, pick int, skip int)
+LANGUAGE SQL AS $$
+    WITH t AS (SELECT (select substring(st.card from '([^+]+)(\+\d+)?')) as card2,
+                      sum(st.pick)                                       as pick,
+                      sum(st.skip)                                       as skip
+               FROM card_pick_stats_base(char_id) st
+               GROUP BY card2)
+    SELECT t.card2 as card, t.pick, t.skip
+    FROM t
+    ORDER BY card
+$$;
+
 ---- create above / drop below ----
 
 drop view if exists stats_overview;

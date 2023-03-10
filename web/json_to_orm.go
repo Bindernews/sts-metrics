@@ -83,6 +83,7 @@ func (c DamageTaken) ToOrm(sc StrCache, runid int32) orm.AddDamageTakenParams {
 		RunID:   runid,
 		Floor:   int32(c.Floor),
 		Turns:   int32(c.Turns),
+		Damage:  float32(c.Damage),
 		Enemies: sc.Get(c.Enemies),
 	}
 }
@@ -111,7 +112,7 @@ func (c *EventChoice) GetStrings() []string {
 func (c PotionObtained) ToOrm(sc StrCache, runid int32) orm.AddPotionObtainParams {
 	return orm.AddPotionObtainParams{
 		RunID: runid,
-		Floor: int32(c.Floor),
+		Floor: int16(c.Floor),
 		Key:   sc.Get(c.Key),
 	}
 }
@@ -123,7 +124,7 @@ func (c *PotionObtained) GetStrings() []string {
 func (s RelicObtain) ToOrm(sc StrCache, runid int32) orm.AddRelicObtainParams {
 	return orm.AddRelicObtainParams{
 		RunID: runid,
-		Floor: int32(s.Floor),
+		Floor: int16(s.Floor),
 		Key:   sc.Get(s.Key),
 	}
 }
@@ -194,6 +195,7 @@ func (s *RunSchemaJson) toArrayOrm(sc StrCache, runid int32) []orm.AddRunArraysP
 		ItemsPurgedIds:       sc.GetAll(s.ItemsPurged),
 		PotionsFloorSpawned:  mapInt32(s.PotionsFloorSpawned),
 		PotionsFloorUsage:    mapInt32(s.PotionsFloorUsage),
+		RelicIds:             sc.GetAll(s.Relics),
 	}}
 }
 
@@ -202,6 +204,7 @@ func (s *RunSchemaJson) GetStrings() []string {
 	out = append(out, s.DailyMods...)
 	out = append(out, s.ItemsPurchased...)
 	out = append(out, s.ItemsPurged...)
+	out = append(out, s.Relics...)
 	for _, u := range s.BossRelics {
 		out = append(out, u.GetStrings()...)
 	}
@@ -307,6 +310,30 @@ func (r *RunSchemaJson) AddToDb(ctx context.Context, sc StrCache, db *orm.Querie
 		return
 	}
 	return
+}
+
+// Convert a run stored in the database into a RunSchemaJson
+func RunToJson(ctx context.Context, db *orm.Queries, play_id string) (data map[string]any, err error) {
+	var rtr orm.RunToJsonRow
+	if rtr, err = db.RunToJson(ctx, play_id); err != nil {
+		return
+	}
+	data1 := make(map[string]any)
+	extra := make(map[string]any)
+	if err = rtr.RRaw.AssignTo(&data1); err != nil {
+		return
+	}
+	if err = rtr.RExtra.AssignTo(&extra); err != nil {
+		return
+	}
+	data1["path_per_floor"] = lo.Map(pathToStringRev(rtr.RPathPerFloor), func(v string, _ int) FloorPath {
+		return ReNull(v)
+	})
+	data1["path_taken"] = pathToStringRev(rtr.RPathTaken)
+	for k, v := range extra {
+		data1[k] = v
+	}
+	return data1, nil
 }
 
 var pathToMapFwd = map[string]string{

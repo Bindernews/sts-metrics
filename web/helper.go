@@ -1,17 +1,17 @@
 package web
 
 import (
-	"bytes"
-	"encoding/json"
-	"io"
-	"net/http"
+	"errors"
+	"net/url"
+	"os"
+	"strings"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4"
 )
 
-func AbortErr(c *gin.Context, code int, err error) {
+func AbortMsg(c *gin.Context, code int, err error) {
 	c.AbortWithStatusJSON(code, c.Error(err).JSON())
 }
 
@@ -26,37 +26,6 @@ func SessGetString(s sessions.Session, key string) string {
 	} else {
 		return ""
 	}
-}
-
-// Helper struct to build an HTTP request, perform it, and parse the output as JSON
-type EzHttpRequest struct {
-	Method  string
-	Url     string
-	Body    []byte
-	Headers map[string]any
-}
-
-func (r *EzHttpRequest) Do(client *http.Client, jsonOut any) error {
-	var body io.Reader = nil
-	if r.Body != nil {
-		body = bytes.NewReader(r.Body)
-	}
-	req, err := http.NewRequest(r.Method, r.Url, body)
-	if err != nil {
-		return err
-	}
-	for k, v := range r.Headers {
-		req.Header.Set(k, v.(string))
-	}
-	res, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-	if err := json.NewDecoder(res.Body).Decode(jsonOut); err != nil {
-		return err
-	}
-	return nil
 }
 
 // Scan database rows into an array of T, returning the first
@@ -79,4 +48,50 @@ func TryEach[T any](list []T, fn func(T) error) error {
 		}
 	}
 	return nil
+}
+
+// Takes a set of handler functions, some of which may be nil,
+// and returns a slice of the non-nil ones in order.
+func HandlerChain(chain ...gin.HandlerFunc) []gin.HandlerFunc {
+	out := make([]gin.HandlerFunc, 0, len(chain))
+	for _, f := range chain {
+		if f != nil {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// Open a file for writing, failing if the file already existed.
+func CreateNewFile(name string) (*os.File, error) {
+	fd, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		return nil, err
+	}
+	if info, err := fd.Stat(); err != nil {
+		fd.Close()
+		return nil, err
+	} else if info.Size() > 0 {
+		fd.Close()
+		return nil, errors.New("duplicate play id")
+	}
+	return fd, nil
+}
+
+// Strips suffix from the request URI before passing on to the next handler.
+func StripRequestPrefix(suffix string) gin.HandlerFunc {
+	// If suffix is empty, return a nop
+	if suffix == "" {
+		return func(_ *gin.Context) {}
+	}
+	return func(c *gin.Context) {
+		oldurl := *c.Request.URL // make a copy
+		oldurl.Path = strings.TrimPrefix(oldurl.Path, suffix)
+		oldurl.RawPath = ""
+		if newurl, err := url.Parse(oldurl.String()); err != nil {
+			c.AbortWithError(404, err)
+		} else {
+			c.Request.URL = newurl
+		}
+	}
 }
