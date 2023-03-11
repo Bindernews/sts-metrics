@@ -189,6 +189,74 @@ func (q *Queries) AddEventChoices(ctx context.Context, arg []AddEventChoicesPara
 	return q.db.CopyFrom(ctx, []string{"eventchoices"}, []string{"run_id", "damage_delta", "event_name_id", "floor", "gold_delta", "max_hp_delta", "player_choice_id", "relics_obtained_ids"}, &iteratorForAddEventChoices{rows: arg})
 }
 
+// iteratorForAddItemsPurchased implements pgx.CopyFromSource.
+type iteratorForAddItemsPurchased struct {
+	rows                 []AddItemsPurchasedParams
+	skippedFirstNextCall bool
+}
+
+func (r *iteratorForAddItemsPurchased) Next() bool {
+	if len(r.rows) == 0 {
+		return false
+	}
+	if !r.skippedFirstNextCall {
+		r.skippedFirstNextCall = true
+		return true
+	}
+	r.rows = r.rows[1:]
+	return len(r.rows) > 0
+}
+
+func (r iteratorForAddItemsPurchased) Values() ([]interface{}, error) {
+	return []interface{}{
+		r.rows[0].RunID,
+		r.rows[0].CardID,
+		r.rows[0].Floor,
+	}, nil
+}
+
+func (r iteratorForAddItemsPurchased) Err() error {
+	return nil
+}
+
+func (q *Queries) AddItemsPurchased(ctx context.Context, arg []AddItemsPurchasedParams) (int64, error) {
+	return q.db.CopyFrom(ctx, []string{"itemspurchased"}, []string{"run_id", "card_id", "floor"}, &iteratorForAddItemsPurchased{rows: arg})
+}
+
+// iteratorForAddItemsPurged implements pgx.CopyFromSource.
+type iteratorForAddItemsPurged struct {
+	rows                 []AddItemsPurgedParams
+	skippedFirstNextCall bool
+}
+
+func (r *iteratorForAddItemsPurged) Next() bool {
+	if len(r.rows) == 0 {
+		return false
+	}
+	if !r.skippedFirstNextCall {
+		r.skippedFirstNextCall = true
+		return true
+	}
+	r.rows = r.rows[1:]
+	return len(r.rows) > 0
+}
+
+func (r iteratorForAddItemsPurged) Values() ([]interface{}, error) {
+	return []interface{}{
+		r.rows[0].RunID,
+		r.rows[0].CardID,
+		r.rows[0].Floor,
+	}, nil
+}
+
+func (r iteratorForAddItemsPurged) Err() error {
+	return nil
+}
+
+func (q *Queries) AddItemsPurged(ctx context.Context, arg []AddItemsPurgedParams) (int64, error) {
+	return q.db.CopyFrom(ctx, []string{"itemspurged"}, []string{"run_id", "card_id", "floor"}, &iteratorForAddItemsPurged{rows: arg})
+}
+
 // iteratorForAddMasterDeck implements pgx.CopyFromSource.
 type iteratorForAddMasterDeck struct {
 	rows                 []AddMasterDeckParams
@@ -349,10 +417,6 @@ func (r iteratorForAddRunArrays) Values() ([]interface{}, error) {
 	return []interface{}{
 		r.rows[0].RunID,
 		r.rows[0].DailyMods,
-		r.rows[0].ItemsPurchasedFloors,
-		r.rows[0].ItemsPurchasedIds,
-		r.rows[0].ItemsPurgedFloors,
-		r.rows[0].ItemsPurgedIds,
 		r.rows[0].PotionsFloorSpawned,
 		r.rows[0].PotionsFloorUsage,
 		r.rows[0].RelicIds,
@@ -364,5 +428,5 @@ func (r iteratorForAddRunArrays) Err() error {
 }
 
 func (q *Queries) AddRunArrays(ctx context.Context, arg []AddRunArraysParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"runarrays"}, []string{"run_id", "daily_mods", "items_purchased_floors", "items_purchased_ids", "items_purged_floors", "items_purged_ids", "potions_floor_spawned", "potions_floor_usage", "relic_ids"}, &iteratorForAddRunArrays{rows: arg})
+	return q.db.CopyFrom(ctx, []string{"runarrays"}, []string{"run_id", "daily_mods", "potions_floor_spawned", "potions_floor_usage", "relic_ids"}, &iteratorForAddRunArrays{rows: arg})
 }

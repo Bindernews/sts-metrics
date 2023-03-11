@@ -86,3 +86,11 @@ func CardNameSplit(card string) orm.CardSpec {
 		return orm.CardSpec{Card: card, Upgrades: 0}
 	}
 }
+
+func StringsToCards(cards []string) []orm.CardSpec {
+	out := make([]orm.CardSpec, len(cards))
+	for i, v := range cards {
+		out[i] = CardNameSplit(v)
+	}
+	return out
+}

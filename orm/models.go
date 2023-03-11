@@ -122,6 +122,18 @@ type Eventchoice struct {
 	RelicsObtainedIds []int32
 }
 
+type Itemspurchased struct {
+	RunID  int32
+	CardID int32
+	Floor  int16
+}
+
+type Itemspurged struct {
+	RunID  int32
+	CardID int32
+	Floor  int16
+}
+
 type Masterdeck struct {
 	ID     int32
 	RunID  int32
@@ -159,15 +171,11 @@ type Relicobtain struct {
 }
 
 type Runarray struct {
-	RunID                int32
-	DailyMods            []int32
-	ItemsPurchasedFloors []int32
-	ItemsPurchasedIds    []int32
-	ItemsPurgedFloors    []int32
-	ItemsPurgedIds       []int32
-	PotionsFloorSpawned  []int32
-	PotionsFloorUsage    []int32
-	RelicIds             []int32
+	RunID               int32
+	DailyMods           []int32
+	PotionsFloorSpawned []int32
+	PotionsFloorUsage   []int32
+	RelicIds            []int32
 }
 
 type Runflag struct {

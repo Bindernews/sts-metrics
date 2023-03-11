@@ -236,22 +236,8 @@ func (s *RunSchemaJson) toPerFloorOrm(oc *OrmContext, runid int32) []orm.AddPerF
 	return out
 }
 
-func (s *RunSchemaJson) toArrayOrm(oc *OrmContext) []orm.AddRunArraysParams {
-	return []orm.AddRunArraysParams{{
-		RunID:                oc.Runid,
-		DailyMods:            oc.Sc.GetAll(s.DailyMods),
-		ItemsPurchasedFloors: mapInt32(s.ItemPurchaseFloors),
-		ItemsPurchasedIds:    oc.Sc.GetAll(s.ItemsPurged),
-		ItemsPurgedFloors:    mapInt32(s.ItemsPurgedFloors),
-		ItemsPurgedIds:       oc.Sc.GetAll(s.ItemsPurged),
-		PotionsFloorSpawned:  mapInt32(s.PotionsFloorSpawned),
-		PotionsFloorUsage:    mapInt32(s.PotionsFloorUsage),
-		RelicIds:             oc.Sc.GetAll(s.Relics),
-	}}
-}
-
-func (s *RunSchemaJson) GetStrings() []string {
-	out := []string{s.BuildVersion, s.CharacterChosen, s.KilledBy, s.NeowBonus, s.NeowCost}
+func (s RunSchemaJson) getOtherStrings() []string {
+	out := []string{}
 	out = append(out, s.DailyMods...)
 	out = append(out, s.ItemsPurchased...)
 	out = append(out, s.ItemsPurged...)
@@ -277,32 +263,86 @@ func (s *RunSchemaJson) GetStrings() []string {
 	return out
 }
 
+func (s RunSchemaJson) getMinimalStrings() []string {
+	return []string{s.BuildVersion, s.CharacterChosen, s.KilledBy, s.NeowBonus, s.NeowCost}
+}
+
 // Add this Run to the database. Returns the rowid of the run.
 func (r *RunSchemaJson) AddToDb(ctx context.Context, oc *OrmContext, db *orm.Queries) (runId int32, err error) {
-	deck := NewMasterDeck()
-	deck.AddCards(r.MasterDeck)
-	if err = oc.Sc.Load(ctx, r.GetStrings()); err != nil {
+	// Pre-load a few strings so we can add the run with valid references
+	// Note that this MAY cause us to add strings we don't use if the play_id is a duplicate.
+	if err = oc.Sc.Load(ctx, r.getMinimalStrings()); err != nil {
 		return
 	}
-	if err = oc.Cc.Load(ctx, deck.GetCards()); err != nil {
-		return
-	}
+	// Insert the new run. May fail if the run already exists.
 	runId, err = db.AddRunRaw(ctx, r.ToAddRunRaw(oc))
 	if err != nil {
 		return
 	}
 	oc.Runid = runId
 
-	// Parse and store card choices
+	// Cache other strings
+	if err = oc.Sc.Load(ctx, r.getOtherStrings()); err != nil {
+		return
+	}
+
+	// Parse deck and other card information so we can cache CardSpecs
+	deck := NewMasterDeck()
+	deck.AddCards(r.MasterDeck)
+	// Parse items purchased + purged
+	specsPurchased := StringsToCards(r.ItemsPurchased)
+	specsPurged := StringsToCards(r.ItemsPurged)
+	// Parse card choices
 	parsedCards := MapToOrm[CardChoiceParsed](r.CardChoices, oc)
 	ormCardSpecs := lo.FlatMap(parsedCards, func(cp CardChoiceParsed, _ int) []orm.CardSpec {
 		return cp.GetCards()
 	})
-	if err = oc.Cc.Load(ctx, ormCardSpecs); err != nil {
+	// Cache CardSpecs
+	if err = oc.Cc.Load(ctx, ormCardSpecs, deck.GetCards(), specsPurchased, specsPurged); err != nil {
 		return
 	}
+
+	// Add items purchased
+	itemsPurchased := make([]orm.AddItemsPurchasedParams, len(specsPurchased))
+	for i, v := range r.ItemPurchaseFloors {
+		itemsPurchased[i] = orm.AddItemsPurchasedParams{
+			RunID:  oc.Runid,
+			CardID: oc.Cc.Get(specsPurchased[i]),
+			Floor:  int16(v),
+		}
+	}
+	if _, err = db.AddItemsPurchased(ctx, itemsPurchased); err != nil {
+		return
+	}
+	// Add items purged
+	itemsPurged := make([]orm.AddItemsPurgedParams, len(specsPurged))
+	for i, v := range r.ItemsPurgedFloors {
+		itemsPurged[i] = orm.AddItemsPurgedParams{
+			RunID:  oc.Runid,
+			CardID: oc.Cc.Get(specsPurged[i]),
+			Floor:  int16(v),
+		}
+	}
+	if _, err = db.AddItemsPurged(ctx, itemsPurged); err != nil {
+		return
+	}
+	// Add card choices
 	cardChoices := MapToOrm[orm.AddCardChoiceParams](parsedCards, oc)
 	if _, err = db.AddCardChoice(ctx, cardChoices); err != nil {
+		return
+	}
+	// Add arrays data
+	ormArrays := []orm.AddRunArraysParams{{
+		RunID:               oc.Runid,
+		DailyMods:           oc.Sc.GetAll(r.DailyMods),
+		PotionsFloorSpawned: mapInt32(r.PotionsFloorSpawned),
+		PotionsFloorUsage:   mapInt32(r.PotionsFloorUsage),
+		RelicIds:            oc.Sc.GetAll(r.Relics),
+	}}
+	if _, err = db.AddRunArrays(ctx, ormArrays); err != nil {
+		return
+	}
+	if _, err = db.AddMasterDeck(ctx, deck.ToOrm(oc)); err != nil {
 		return
 	}
 
@@ -325,13 +365,8 @@ func (r *RunSchemaJson) AddToDb(ctx context.Context, oc *OrmContext, db *orm.Que
 			}
 		}
 	}
-	if _, err = db.AddRunArrays(ctx, r.toArrayOrm(oc)); err != nil {
-		return
-	}
-	if _, err = db.AddMasterDeck(ctx, deck.ToOrm(oc)); err != nil {
-		return
-	}
-	// Store unparsed data in
+
+	// Store unparsed data
 	if len(r.Extra) > 0 {
 		var extraBytes []byte
 		if extraBytes, err = json.Marshal(r.Extra); err != nil {

@@ -66,6 +66,18 @@ func (q *Queries) AddFlag(ctx context.Context, arg AddFlagParams) error {
 	return err
 }
 
+type AddItemsPurchasedParams struct {
+	RunID  int32
+	CardID int32
+	Floor  int16
+}
+
+type AddItemsPurgedParams struct {
+	RunID  int32
+	CardID int32
+	Floor  int16
+}
+
 type AddMasterDeckParams struct {
 	RunID  int32
 	CardID int32
@@ -93,15 +105,11 @@ type AddRelicObtainParams struct {
 }
 
 type AddRunArraysParams struct {
-	RunID                int32
-	DailyMods            []int32
-	ItemsPurchasedFloors []int32
-	ItemsPurchasedIds    []int32
-	ItemsPurgedFloors    []int32
-	ItemsPurgedIds       []int32
-	PotionsFloorSpawned  []int32
-	PotionsFloorUsage    []int32
-	RelicIds             []int32
+	RunID               int32
+	DailyMods           []int32
+	PotionsFloorSpawned []int32
+	PotionsFloorUsage   []int32
+	RelicIds            []int32
 }
 
 const addRunRaw = `-- name: AddRunRaw :one

@@ -40,10 +40,12 @@ INSERT INTO BossRelics (run_id, not_picked, picked, ord) VALUES ($1,$2,$3,$4);
 -- name: AddPerFloor :copyfrom
 INSERT INTO PerFloorData (run_id, floor, gold, current_hp, max_hp) VALUES ($1,$2,$3,$4,$5);
 -- name: AddRunArrays :copyfrom
-INSERT INTO RunArrays
-    (run_id, daily_mods, items_purchased_floors, items_purchased_ids, items_purged_floors, items_purged_ids,
-     potions_floor_spawned, potions_floor_usage, relic_ids)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9);
+INSERT INTO RunArrays (run_id, daily_mods, potions_floor_spawned, potions_floor_usage, relic_ids)
+VALUES ($1,$2,$3,$4,$5);
+-- name: AddItemsPurchased :copyfrom
+INSERT INTO ItemsPurchased (run_id, card_id, floor) VALUES ($1,$2,$3);
+-- name: AddItemsPurged :copyfrom
+INSERT INTO ItemsPurged (run_id, card_id, floor) VALUES ($1,$2,$3);
 -- name: AddRunsExtra :exec
 INSERT INTO runs_extra (run_id, extra) VALUES ($1,$2);
 
