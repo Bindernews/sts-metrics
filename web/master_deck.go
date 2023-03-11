@@ -14,20 +14,16 @@ var CardUpgradeRegex = regexp.MustCompile(`(.+)\+([0-9]+)$`)
 
 // Parsed master deck entry
 type DeckEntry struct {
-	// Base card name (without upgrades)
-	Name string
-	// Upgrade count
-	Upgrades int
+	Card orm.CardSpec
 	// Instances in master deck
 	Count int
 }
 
-func (e DeckEntry) ToOrm(sc StrCache, runid int32) orm.AddMasterDeckParams {
+func (e DeckEntry) ToOrm(oc *OrmContext, _ int) orm.AddMasterDeckParams {
 	return orm.AddMasterDeckParams{
-		RunID:    runid,
-		CardID:   sc.Get(e.Name),
-		Count:    int16(e.Count),
-		Upgrades: int16(e.Upgrades),
+		RunID:  oc.Runid,
+		CardID: oc.Cc.Get(e.Card),
+		Count:  int16(e.Count),
 	}
 }
 
@@ -50,40 +46,43 @@ func (d *MasterDeck) AddCards(cards []string) {
 			row.Count += 1
 		} else {
 			// Otherwise add a new entry for it
-			name, upg := CardNameSplit(card)
-			row = DeckEntry{Name: name, Upgrades: upg, Count: 1}
+			row = DeckEntry{Card: CardNameSplit(card), Count: 1}
 		}
 		(*d)[card] = row
 	}
 }
 
+func (d MasterDeck) ToOrm(oc *OrmContext) []orm.AddMasterDeckParams {
+	return MapToOrm[orm.AddMasterDeckParams](lo.Values(d), oc)
+}
+
+func (d MasterDeck) GetCards() []orm.CardSpec {
+	cards := make([]orm.CardSpec, 0)
+	for _, e := range d {
+		cards = append(cards, e.Card)
+	}
+	return cards
+}
+
 // Returns list of unique base names in the deck
-func (d MasterDeck) GetAllNames() []string {
+func (d MasterDeck) GetStrings() []string {
 	names := make(map[string]bool)
 	for _, e := range d {
-		names[e.Name] = true
+		names[e.Card.Card] = true
 	}
 	return lo.Keys(names)
 }
 
-func (d MasterDeck) ToOrm(sc StrCache, runid int32) []orm.AddMasterDeckParams {
-	return MapToOrm[orm.AddMasterDeckParams](lo.Values(d), sc, runid)
-}
-
-func (d MasterDeck) GetStrings() []string {
-	return d.GetAllNames()
-}
-
 // Takes a card name that may include an upgrade count
 // and returns the base name and number of ugrades (may be 0).
-func CardNameSplit(card string) (string, int) {
+func CardNameSplit(card string) orm.CardSpec {
 	if mt := CardUpgradeRegex.FindStringSubmatch(card); mt != nil {
 		v, err := strconv.Atoi(mt[2])
 		if err != nil {
 			v = 0
 		}
-		return mt[1], v
+		return orm.CardSpec{Card: mt[1], Upgrades: v}
 	} else {
-		return card, 0
+		return orm.CardSpec{Card: card, Upgrades: 0}
 	}
 }

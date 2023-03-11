@@ -34,9 +34,9 @@ INSERT INTO EventChoices
 VALUES
     ($1,$2,$3,$4,$5,$6,$7,$8);
 -- name: AddMasterDeck :copyfrom
-INSERT INTO MasterDecks (run_id, card_id, count, upgrades) VALUES ($1,$2,$3,$4);
+INSERT INTO MasterDecks (run_id, card_id, count) VALUES ($1,$2,$3);
 -- name: AddBossRelics :copyfrom
-INSERT INTO BossRelics (run_id, not_picked, picked) VALUES ($1,$2,$3);
+INSERT INTO BossRelics (run_id, not_picked, picked, ord) VALUES ($1,$2,$3,$4);
 -- name: AddPerFloor :copyfrom
 INSERT INTO PerFloorData (run_id, floor, gold, current_hp, max_hp) VALUES ($1,$2,$3,$4,$5);
 -- name: AddRunArrays :copyfrom
@@ -49,7 +49,6 @@ INSERT INTO runs_extra (run_id, extra) VALUES ($1,$2);
 
 -- name: GetStr :one
 SELECT id FROM StrCache WHERE str = $1;
-
 -- name: StrCacheAdd :exec
 SELECT str_cache_add($1::text[]);
 -- name: StrCacheToId :many
@@ -65,4 +64,3 @@ UPDATE rawjsonarchive ra SET status = $1 WHERE status = 0 RETURNING ra.*;
 UPDATE rawjsonarchive ra SET status = -1 WHERE status = $1 RETURNING ra.id;
 -- name: ArchiveAdd :exec
 INSERT INTO RawJsonArchive(bdata, play_id) VALUES ($1, $2);
-

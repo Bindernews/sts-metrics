@@ -82,6 +82,20 @@ type Cardchoice struct {
 	Floor     int32
 }
 
+type Cardspec struct {
+	ID       int32
+	Card     string
+	Upgrades int32
+}
+
+type Cardspecsex struct {
+	ID       int32
+	Card     string
+	Upgrades int32
+	Suffix   string
+	CardFull interface{}
+}
+
 type CharacterList struct {
 	ID   int32
 	Name string
@@ -109,11 +123,10 @@ type Eventchoice struct {
 }
 
 type Masterdeck struct {
-	ID       int32
-	RunID    int32
-	CardID   int32
-	Upgrades int16
-	Count    int16
+	ID     int32
+	RunID  int32
+	CardID int32
+	Count  int16
 }
 
 type Perfloordatum struct {

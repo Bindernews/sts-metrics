@@ -16,6 +16,7 @@ type AddBossRelicsParams struct {
 	RunID     int32
 	NotPicked []int32
 	Picked    int32
+	Ord       int16
 }
 
 type AddCampfireParams struct {
@@ -66,10 +67,9 @@ func (q *Queries) AddFlag(ctx context.Context, arg AddFlagParams) error {
 }
 
 type AddMasterDeckParams struct {
-	RunID    int32
-	CardID   int32
-	Count    int16
-	Upgrades int16
+	RunID  int32
+	CardID int32
+	Count  int16
 }
 
 type AddPerFloorParams struct {

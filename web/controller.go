@@ -49,15 +49,21 @@ const (
 	ctxBodyBytes = "body-bytes"
 )
 
+type StrCache = DbCache[string]
+
 type MainController struct {
-	Srv      *Services
-	strcache StrCache
+	Srv    *Services
+	ormCtx *OrmContext
 }
 
 func (s *MainController) Init(r *gin.Engine) error {
 	cfg := s.Srv.Config
 	db := orm.New(s.Srv.Pool)
-	s.strcache = NewStrCache(db.StrCacheToId, db.StrCacheAdd)
+
+	s.ormCtx = &OrmContext{
+		Sc: NewDbCache(db.StrCacheToId, db.StrCacheAdd),
+		Cc: NewDbCache(db.CardSpecToId, db.CardSpecAdd),
+	}
 
 	// Set the gin run mode
 	if cfg.DebugMode {
@@ -204,9 +210,10 @@ func (s *MainController) saveRawToFile(c *gin.Context, req orm.ArchiveAddParams)
 func (s *MainController) storeToDb(c *gin.Context) {
 	ctx := c.Request.Context()
 	runData := c.MustGet(ctxRunData).(RunSchemaJson)
+	oc := s.ormCtx.Copy()
 	// Store in DB
 	err := s.Srv.Pool.BeginFunc(ctx, func(tx pgx.Tx) error {
-		_, err := runData.AddToDb(ctx, s.strcache, orm.New(tx))
+		_, err := runData.AddToDb(ctx, oc, orm.New(tx))
 		return err
 	})
 	if err != nil {

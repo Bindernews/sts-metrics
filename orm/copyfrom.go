@@ -32,6 +32,7 @@ func (r iteratorForAddBossRelics) Values() ([]interface{}, error) {
 		r.rows[0].RunID,
 		r.rows[0].NotPicked,
 		r.rows[0].Picked,
+		r.rows[0].Ord,
 	}, nil
 }
 
@@ -40,7 +41,7 @@ func (r iteratorForAddBossRelics) Err() error {
 }
 
 func (q *Queries) AddBossRelics(ctx context.Context, arg []AddBossRelicsParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"bossrelics"}, []string{"run_id", "not_picked", "picked"}, &iteratorForAddBossRelics{rows: arg})
+	return q.db.CopyFrom(ctx, []string{"bossrelics"}, []string{"run_id", "not_picked", "picked", "ord"}, &iteratorForAddBossRelics{rows: arg})
 }
 
 // iteratorForAddCampfire implements pgx.CopyFromSource.
@@ -211,7 +212,6 @@ func (r iteratorForAddMasterDeck) Values() ([]interface{}, error) {
 		r.rows[0].RunID,
 		r.rows[0].CardID,
 		r.rows[0].Count,
-		r.rows[0].Upgrades,
 	}, nil
 }
 
@@ -220,7 +220,7 @@ func (r iteratorForAddMasterDeck) Err() error {
 }
 
 func (q *Queries) AddMasterDeck(ctx context.Context, arg []AddMasterDeckParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"masterdecks"}, []string{"run_id", "card_id", "count", "upgrades"}, &iteratorForAddMasterDeck{rows: arg})
+	return q.db.CopyFrom(ctx, []string{"masterdecks"}, []string{"run_id", "card_id", "count"}, &iteratorForAddMasterDeck{rows: arg})
 }
 
 // iteratorForAddPerFloor implements pgx.CopyFromSource.

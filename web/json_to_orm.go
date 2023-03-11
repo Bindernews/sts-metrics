@@ -15,6 +15,36 @@ import (
 	"github.com/samber/lo"
 )
 
+type OrmContext struct {
+	// String cache
+	Sc DbCache[string]
+	// Card cache
+	Cc DbCache[orm.CardSpec]
+	// ID of run in database
+	Runid int32
+}
+
+func (oc OrmContext) Copy() *OrmContext {
+	return &OrmContext{
+		Sc:    oc.Sc,
+		Cc:    oc.Cc,
+		Runid: 0,
+	}
+}
+
+type ConvToOrm[T any] interface {
+	ToOrm(oc *OrmContext, ix int) T
+}
+
+// Calls ToOrm on inp, returning the result
+func MapToOrm[T any, E ConvToOrm[T]](inp []E, oc *OrmContext) []T {
+	out := make([]T, len(inp))
+	for i, e := range inp {
+		out[i] = e.ToOrm(oc, i)
+	}
+	return out
+}
+
 // Make sure data is properly round-tripped.
 // It's not the fastest method, but oh well.
 func (j *RunSchemaJson) MarshalJSON() ([]byte, error) {
@@ -35,11 +65,12 @@ func (j *RunSchemaJson) MarshalJSON() ([]byte, error) {
 	return json.Marshal(raw)
 }
 
-func (c BossRelicChoice) ToOrm(sc StrCache, runid int32) orm.AddBossRelicsParams {
+func (c BossRelicChoice) ToOrm(oc *OrmContext, ix int) orm.AddBossRelicsParams {
 	return orm.AddBossRelicsParams{
-		RunID:     runid,
-		NotPicked: sc.GetAll(c.NotPicked),
-		Picked:    sc.Get(c.Picked),
+		RunID:     oc.Runid,
+		NotPicked: oc.Sc.GetAll(c.NotPicked),
+		Picked:    oc.Sc.Get(c.Picked),
+		Ord:       int16(ix),
 	}
 }
 
@@ -48,11 +79,11 @@ func (c *BossRelicChoice) GetStrings() []string {
 }
 
 // Convert CampfireChoice to an orm object
-func (c CampfireChoice) ToOrm(sc StrCache, runid int32) orm.AddCampfireParams {
+func (c CampfireChoice) ToOrm(oc *OrmContext, _ int) orm.AddCampfireParams {
 	return orm.AddCampfireParams{
-		RunID: runid,
-		Data:  sc.MaybeGet(c.Data),
-		Key:   sc.Get(c.Key),
+		RunID: oc.Runid,
+		Data:  oc.Sc.MaybeGet(c.Data),
+		Key:   oc.Sc.Get(c.Key),
 		Floor: int32(c.Floor),
 	}
 }
@@ -65,26 +96,46 @@ func (c *CampfireChoice) GetStrings() []string {
 	return []string{c.Key, data}
 }
 
-func (c CardChoice) ToOrm(sc StrCache, runid int32) orm.AddCardChoiceParams {
+// Convert CardChoice to intermediary form
+func (c CardChoice) ToOrm(oc *OrmContext, _ int) CardChoiceParsed {
+	cp := CardChoiceParsed{
+		Floor:     int(c.Floor),
+		NotPicked: make([]orm.CardSpec, len(c.NotPicked)),
+		Picked:    CardNameSplit(c.Picked),
+	}
+	for i, v := range c.NotPicked {
+		cp.NotPicked[i] = CardNameSplit(v)
+	}
+	return cp
+}
+
+// Pre-parsed version of CardChoice
+type CardChoiceParsed struct {
+	Floor     int
+	NotPicked []orm.CardSpec
+	Picked    orm.CardSpec
+}
+
+func (cp CardChoiceParsed) GetCards() []orm.CardSpec {
+	return append([]orm.CardSpec{cp.Picked}, cp.NotPicked...)
+}
+
+func (cp CardChoiceParsed) ToOrm(oc *OrmContext, _ int) orm.AddCardChoiceParams {
 	return orm.AddCardChoiceParams{
-		RunID:     runid,
-		Floor:     int32(c.Floor),
-		NotPicked: sc.GetAll(c.NotPicked),
-		Picked:    sc.Get(c.Picked),
+		RunID:     oc.Runid,
+		Floor:     int32(cp.Floor),
+		NotPicked: oc.Cc.GetAll(cp.NotPicked),
+		Picked:    oc.Cc.Get(cp.Picked),
 	}
 }
 
-func (c *CardChoice) GetStrings() []string {
-	return append([]string{c.Picked}, c.NotPicked...)
-}
-
-func (c DamageTaken) ToOrm(sc StrCache, runid int32) orm.AddDamageTakenParams {
+func (c DamageTaken) ToOrm(oc *OrmContext, _ int) orm.AddDamageTakenParams {
 	return orm.AddDamageTakenParams{
-		RunID:   runid,
+		RunID:   oc.Runid,
 		Floor:   int32(c.Floor),
 		Turns:   int32(c.Turns),
 		Damage:  float32(c.Damage),
-		Enemies: sc.Get(c.Enemies),
+		Enemies: oc.Sc.Get(c.Enemies),
 	}
 }
 
@@ -92,16 +143,16 @@ func (c *DamageTaken) GetStrings() []string {
 	return []string{c.Enemies}
 }
 
-func (c EventChoice) ToOrm(sc StrCache, runid int32) orm.AddEventChoicesParams {
+func (c EventChoice) ToOrm(oc *OrmContext, _ int) orm.AddEventChoicesParams {
 	return orm.AddEventChoicesParams{
-		RunID:             runid,
+		RunID:             oc.Runid,
 		DamageDelta:       int32(c.DamageHealed - c.DamageTaken),
-		EventNameID:       sc.Get(c.EventName),
+		EventNameID:       oc.Sc.Get(c.EventName),
 		Floor:             int32(c.Floor),
 		GoldDelta:         int32(c.GoldGain - c.GoldLoss),
 		MaxHpDelta:        int32(c.MaxHpGain - c.MaxHpLoss),
-		PlayerChoiceID:    sc.Get(c.PlayerChoice),
-		RelicsObtainedIds: sc.GetAll(c.RelicsObtained),
+		PlayerChoiceID:    oc.Sc.Get(c.PlayerChoice),
+		RelicsObtainedIds: oc.Sc.GetAll(c.RelicsObtained),
 	}
 }
 
@@ -109,11 +160,11 @@ func (c *EventChoice) GetStrings() []string {
 	return append([]string{c.EventName, c.PlayerChoice}, c.RelicsObtained...)
 }
 
-func (c PotionObtained) ToOrm(sc StrCache, runid int32) orm.AddPotionObtainParams {
+func (c PotionObtained) ToOrm(oc *OrmContext, _ int) orm.AddPotionObtainParams {
 	return orm.AddPotionObtainParams{
-		RunID: runid,
+		RunID: oc.Runid,
 		Floor: int16(c.Floor),
-		Key:   sc.Get(c.Key),
+		Key:   oc.Sc.Get(c.Key),
 	}
 }
 
@@ -121,11 +172,11 @@ func (c *PotionObtained) GetStrings() []string {
 	return []string{c.Key}
 }
 
-func (s RelicObtain) ToOrm(sc StrCache, runid int32) orm.AddRelicObtainParams {
+func (s RelicObtain) ToOrm(oc *OrmContext, _ int) orm.AddRelicObtainParams {
 	return orm.AddRelicObtainParams{
-		RunID: runid,
+		RunID: oc.Runid,
 		Floor: int16(s.Floor),
-		Key:   sc.Get(s.Key),
+		Key:   oc.Sc.Get(s.Key),
 	}
 }
 
@@ -133,7 +184,7 @@ func (c *RelicObtain) GetStrings() []string {
 	return []string{c.Key}
 }
 
-func (s *RunSchemaJson) ToAddRunRaw(sc StrCache) orm.AddRunRawParams {
+func (s *RunSchemaJson) ToAddRunRaw(oc *OrmContext) orm.AddRunRawParams {
 	tstamp := time.UnixMilli(int64(s.Timestamp))
 	pathNorm := lo.Map(s.PathPerFloor, func(v FloorPath, _ int) string {
 		return DeNull(v)
@@ -141,18 +192,18 @@ func (s *RunSchemaJson) ToAddRunRaw(sc StrCache) orm.AddRunRawParams {
 
 	return orm.AddRunRawParams{
 		AscensionLevel:   int32(s.AscensionLevel),
-		BuildVersion:     sc.Get(s.BuildVersion),
+		BuildVersion:     oc.Sc.Get(s.BuildVersion),
 		CampfireRested:   int32(s.CampfireRested),
 		CampfireUpgraded: int32(s.CampfireUpgraded),
-		CharacterID:      sc.Get(s.CharacterChosen),
+		CharacterID:      oc.Sc.Get(s.CharacterChosen),
 		ChooseSeed:       s.ChoseSeed,
 		CircletCount:     int32(s.CircletCount),
 		FloorReached:     int32(s.FloorReached),
 		Gold:             int32(s.Gold),
-		KilledBy:         sc.Get(s.KilledBy),
+		KilledBy:         oc.Sc.Get(s.KilledBy),
 		LocalTime:        s.LocalTime,
-		NeowBonusID:      sc.Get(s.NeowBonus),
-		NeowCostID:       sc.Get(s.NeowCost),
+		NeowBonusID:      oc.Sc.Get(s.NeowBonus),
+		NeowCostID:       oc.Sc.Get(s.NeowCost),
 		PathPerFloor:     pathToStringFwd(pathNorm),
 		PathTaken:        pathToStringFwd(s.PathTaken),
 		PlayID:           s.PlayId.String(),
@@ -170,7 +221,7 @@ func (s *RunSchemaJson) ToAddRunRaw(sc StrCache) orm.AddRunRawParams {
 	}
 }
 
-func (s *RunSchemaJson) toPerFloorOrm(runid int32) []orm.AddPerFloorParams {
+func (s *RunSchemaJson) toPerFloorOrm(oc *OrmContext, runid int32) []orm.AddPerFloorParams {
 	end := len(s.CurrentHpPerFloor)
 	out := make([]orm.AddPerFloorParams, end)
 	for i := 0; i < end; i++ {
@@ -185,17 +236,17 @@ func (s *RunSchemaJson) toPerFloorOrm(runid int32) []orm.AddPerFloorParams {
 	return out
 }
 
-func (s *RunSchemaJson) toArrayOrm(sc StrCache, runid int32) []orm.AddRunArraysParams {
+func (s *RunSchemaJson) toArrayOrm(oc *OrmContext) []orm.AddRunArraysParams {
 	return []orm.AddRunArraysParams{{
-		RunID:                runid,
-		DailyMods:            sc.GetAll(s.DailyMods),
+		RunID:                oc.Runid,
+		DailyMods:            oc.Sc.GetAll(s.DailyMods),
 		ItemsPurchasedFloors: mapInt32(s.ItemPurchaseFloors),
-		ItemsPurchasedIds:    sc.GetAll(s.ItemsPurged),
+		ItemsPurchasedIds:    oc.Sc.GetAll(s.ItemsPurged),
 		ItemsPurgedFloors:    mapInt32(s.ItemsPurgedFloors),
-		ItemsPurgedIds:       sc.GetAll(s.ItemsPurged),
+		ItemsPurgedIds:       oc.Sc.GetAll(s.ItemsPurged),
 		PotionsFloorSpawned:  mapInt32(s.PotionsFloorSpawned),
 		PotionsFloorUsage:    mapInt32(s.PotionsFloorUsage),
-		RelicIds:             sc.GetAll(s.Relics),
+		RelicIds:             oc.Sc.GetAll(s.Relics),
 	}}
 }
 
@@ -209,9 +260,6 @@ func (s *RunSchemaJson) GetStrings() []string {
 		out = append(out, u.GetStrings()...)
 	}
 	for _, u := range s.CampfireChoices {
-		out = append(out, u.GetStrings()...)
-	}
-	for _, u := range s.CardChoices {
 		out = append(out, u.GetStrings()...)
 	}
 	for _, u := range s.DamageTaken {
@@ -230,16 +278,35 @@ func (s *RunSchemaJson) GetStrings() []string {
 }
 
 // Add this Run to the database. Returns the rowid of the run.
-func (r *RunSchemaJson) AddToDb(ctx context.Context, sc StrCache, db *orm.Queries) (runId int32, err error) {
+func (r *RunSchemaJson) AddToDb(ctx context.Context, oc *OrmContext, db *orm.Queries) (runId int32, err error) {
 	deck := NewMasterDeck()
 	deck.AddCards(r.MasterDeck)
-	if err = sc.Load(ctx, r.GetStrings(), deck.GetStrings()); err != nil {
+	if err = oc.Sc.Load(ctx, r.GetStrings()); err != nil {
 		return
 	}
-	runId, err = db.AddRunRaw(ctx, r.ToAddRunRaw(sc))
+	if err = oc.Cc.Load(ctx, deck.GetCards()); err != nil {
+		return
+	}
+	runId, err = db.AddRunRaw(ctx, r.ToAddRunRaw(oc))
 	if err != nil {
 		return
 	}
+	oc.Runid = runId
+
+	// Parse and store card choices
+	parsedCards := MapToOrm[CardChoiceParsed](r.CardChoices, oc)
+	ormCardSpecs := lo.FlatMap(parsedCards, func(cp CardChoiceParsed, _ int) []orm.CardSpec {
+		return cp.GetCards()
+	})
+	if err = oc.Cc.Load(ctx, ormCardSpecs); err != nil {
+		return
+	}
+	cardChoices := MapToOrm[orm.AddCardChoiceParams](parsedCards, oc)
+	if _, err = db.AddCardChoice(ctx, cardChoices); err != nil {
+		return
+	}
+
+	// Flags
 	flags := map[string]bool{
 		"ascension": r.IsAscensionMode,
 		"beta":      r.IsBeta,
@@ -258,12 +325,13 @@ func (r *RunSchemaJson) AddToDb(ctx context.Context, sc StrCache, db *orm.Querie
 			}
 		}
 	}
-	if _, err = db.AddRunArrays(ctx, r.toArrayOrm(sc, runId)); err != nil {
+	if _, err = db.AddRunArrays(ctx, r.toArrayOrm(oc)); err != nil {
 		return
 	}
-	if _, err = db.AddMasterDeck(ctx, deck.ToOrm(sc, runId)); err != nil {
+	if _, err = db.AddMasterDeck(ctx, deck.ToOrm(oc)); err != nil {
 		return
 	}
+	// Store unparsed data in
 	if len(r.Extra) > 0 {
 		var extraBytes []byte
 		if extraBytes, err = json.Marshal(r.Extra); err != nil {
@@ -276,36 +344,32 @@ func (r *RunSchemaJson) AddToDb(ctx context.Context, sc StrCache, db *orm.Querie
 			return
 		}
 	}
-
-	perFloor := r.toPerFloorOrm(runId)
+	// All other DB rows
+	perFloor := r.toPerFloorOrm(oc, runId)
 	if _, err = db.AddPerFloor(ctx, perFloor); err != nil {
 		return
 	}
-	ormBossRelics := MapToOrm[orm.AddBossRelicsParams](r.BossRelics, sc, runId)
+	ormBossRelics := MapToOrm[orm.AddBossRelicsParams](r.BossRelics, oc)
 	if _, err = db.AddBossRelics(ctx, ormBossRelics); err != nil {
 		return
 	}
-	ormCampfires := MapToOrm[orm.AddCampfireParams](r.CampfireChoices, sc, runId)
+	ormCampfires := MapToOrm[orm.AddCampfireParams](r.CampfireChoices, oc)
 	if _, err = db.AddCampfire(ctx, ormCampfires); err != nil {
 		return
 	}
-	ormCards := MapToOrm[orm.AddCardChoiceParams](r.CardChoices, sc, runId)
-	if _, err = db.AddCardChoice(ctx, ormCards); err != nil {
-		return
-	}
-	ormDamageTaken := MapToOrm[orm.AddDamageTakenParams](r.DamageTaken, sc, runId)
+	ormDamageTaken := MapToOrm[orm.AddDamageTakenParams](r.DamageTaken, oc)
 	if _, err = db.AddDamageTaken(ctx, ormDamageTaken); err != nil {
 		return
 	}
-	ormEvents := MapToOrm[orm.AddEventChoicesParams](r.EventChoices, sc, runId)
+	ormEvents := MapToOrm[orm.AddEventChoicesParams](r.EventChoices, oc)
 	if _, err = db.AddEventChoices(ctx, ormEvents); err != nil {
 		return
 	}
-	ormPotions := MapToOrm[orm.AddPotionObtainParams](r.PotionsObtained, sc, runId)
+	ormPotions := MapToOrm[orm.AddPotionObtainParams](r.PotionsObtained, oc)
 	if _, err = db.AddPotionObtain(ctx, ormPotions); err != nil {
 		return
 	}
-	ormRelics := MapToOrm[orm.AddRelicObtainParams](r.RelicsObtained, sc, runId)
+	ormRelics := MapToOrm[orm.AddRelicObtainParams](r.RelicsObtained, oc)
 	if _, err = db.AddRelicObtain(ctx, ormRelics); err != nil {
 		return
 	}
@@ -403,19 +467,6 @@ func mapInt32(ar []float64) []int32 {
 	out := make([]int32, len(ar))
 	for i, v := range ar {
 		out[i] = int32(v)
-	}
-	return out
-}
-
-type ConvToOrm[T any] interface {
-	ToOrm(sc StrCache, runid int32) T
-}
-
-// Calls ToOrm on inp, returning the result
-func MapToOrm[T any, E ConvToOrm[T]](inp []E, sc StrCache, runid int32) []T {
-	out := make([]T, len(inp))
-	for i, e := range inp {
-		out[i] = e.ToOrm(sc, runid)
 	}
 	return out
 }

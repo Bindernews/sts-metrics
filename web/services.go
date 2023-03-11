@@ -4,9 +4,11 @@ import (
 	"context"
 	"os"
 
+	"github.com/bindernews/sts-msr/orm"
 	"github.com/bindernews/sts-msr/tools"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
+	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
@@ -19,13 +21,24 @@ type Services struct {
 func (s *Services) LoadDefaults() error {
 	// Connect to DB
 	ctx := context.Background()
-	pool, err := pgxpool.Connect(ctx, os.Getenv(tools.EnvPostgresConn))
+	poolCfg, err := pgxpool.ParseConfig(os.Getenv(tools.EnvPostgresConn))
 	if err != nil {
 		return err
 	}
-	s.Pool = pool
+	poolCfg.AfterConnect = func(ctx context.Context, c *pgx.Conn) error {
+		if err := (orm.CardSpec{}).RegisterType(ctx, c); err != nil {
+			return err
+		}
+		return nil
+	}
+	s.Pool, err = pgxpool.ConnectConfig(ctx, poolCfg)
+	if err != nil {
+		return err
+	}
+
 	// Setup session
 	s.SeStore = cookie.NewStore([]byte(os.Getenv("SESSION_SECRET")))
+
 	// Initialize config
 	s.Config = NewConfig()
 	return nil
