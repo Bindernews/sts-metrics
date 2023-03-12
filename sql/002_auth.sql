@@ -33,6 +33,7 @@ DECLARE
     uid int;
     scope_ids int[];
 BEGIN
+    PERFORM set_config('search_path', 'auth', true);
     SELECT id INTO uid FROM users WHERE email = email_;
     if not FOUND then
         RAISE EXCEPTION 'user % not found', email_;
@@ -48,10 +49,10 @@ END $$;
 CREATE OR REPLACE FUNCTION user_has_scopes(email_ text, scope_list text[]) RETURNS bool
 LANGUAGE SQL AS $$
     SELECT bool_and(scope_id is not null)
-    FROM scopes s
-        CROSS JOIN (SELECT id FROM users WHERE email = email_) uid
+    FROM auth.scopes s
+        CROSS JOIN (SELECT id FROM auth.users WHERE email = email_) uid
         RIGHT JOIN (SELECT unnest(scope_list) t) txt ON txt.t = s.key
-        LEFT JOIN users_to_scopes uts ON s.id = uts.scope_id AND uid.id = uts.user_id
+        LEFT JOIN auth.users_to_scopes uts ON s.id = uts.scope_id AND uid.id = uts.user_id
 $$;
 
 -- TEST DATA

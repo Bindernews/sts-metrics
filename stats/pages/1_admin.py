@@ -13,25 +13,27 @@ if not has_scopes(['admin']):
 
 @st.cache_data
 def get_users():
-    q = sa.text('select u.email from users u order by u.email')
+    q = sa.text('''
+    select u.email from auth.users u order by u.email
+    ''')
     return query(q)
 
 @st.cache_data
 def get_all_scopes():
-    q = sa.text('select s.key from scopes s')
+    q = sa.text('select s.key from auth.scopes s')
     return query(q)['key']
 
 def get_user_scopes(user: str):
     q = sa.text('''
     SELECT s.key
-    FROM users_to_scopes us
-    JOIN (SELECT * FROM users WHERE email = :email) u ON u.id = us.user_id
-    JOIN scopes s ON s.id = us.scope_id;
+    FROM auth.users_to_scopes us
+    JOIN (SELECT * FROM auth.users WHERE email = :email) u ON u.id = us.user_id
+    JOIN auth.scopes s ON s.id = us.scope_id;
     ''').bindparams(email=user)
     return query(q)['key']
 
 def set_user_scopes(user: str, scopes: list[str]):
-    q = sa.text('''SELECT user_set_scopes(:user, :scopes)
+    q = sa.text('''SELECT auth.user_set_scopes(:user, :scopes)
     ''').bindparams(user=user, scopes=scopes)
     with get_conn() as c:
         c.execute(q)
@@ -45,7 +47,7 @@ def refresh_scopes():
 
 def delete_user(user):
     q = sa.text('''
-    DELETE FROM users WHERE email = :email
+    DELETE FROM auth.users WHERE email = :email
     ''').bindparams(email=user)
     with get_conn() as c:
         c.execute(q)
@@ -56,7 +58,7 @@ def delete_user(user):
 
 def add_user(user):
     q = sa.text('''
-    INSERT INTO users (email) VALUES (:email)
+    INSERT INTO auth.users (email) VALUES (:email)
     RETURNING users.id;
     ''').bindparams(email=user)
     with get_conn() as c:

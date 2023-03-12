@@ -259,7 +259,7 @@ func (s *MainController) CtxInject(c *gin.Context) {
 // Uses email from CtxEmail
 func (s *MainController) authScopes(scopes []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		const query = `SELECT user_has_scopes($1,$2)`
+		const query = `SELECT auth.user_has_scopes($1,$2)`
 		ctx := c.Request.Context()
 		// Attempt to get the user's email address
 		email := c.GetString(CtxEmail)

@@ -31,6 +31,6 @@ def has_scopes(scopes: list[str]) -> bool:
     email = headers.get('X-Forwarded-Email')
     if email is None:
         return False
-    q = sa.text('SELECT user_has_scopes(:email, :scopes)').bindparams(email=email, scopes=scopes)
+    q = sa.text('SELECT auth.user_has_scopes(:email, :scopes)').bindparams(email=email, scopes=scopes)
     with get_db().connect() as c:
         return c.scalar(q)
