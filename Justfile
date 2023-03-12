@@ -57,7 +57,7 @@ install-smtool:
 
 # Upload runs using swiss
 upload-runs DIR URL: (install-smtool)
-    smtool upload-runs -url {{URL}} -dir {{DIR}}
+    smtool upload-runs -url {{URL}} -src {{DIR}}
 
 # Export raw run archives to a .tar.gz file
 export-runs TAR_FILE: (install-smtool)

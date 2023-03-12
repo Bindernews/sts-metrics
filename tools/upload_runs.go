@@ -19,10 +19,8 @@ type UploadRunsCmd struct {
 	flags *flag.FlagSet
 	// URL to upload to
 	Url string
-	// Directory to search for .run files
-	RunsDir string
-	// Path to either .run file or .tar.gz file with runs in it
-	RunsFile string
+	// Path to either .run file or .tar.gz file with runs in it, or directory to search for .run files
+	Source string
 	// Number of workers
 	Workers int
 	// Destination URL
@@ -40,8 +38,7 @@ func NewUploadRunsCmd() *UploadRunsCmd {
 	cmd := new(UploadRunsCmd)
 	fg := flag.NewFlagSet("upload-runs", flag.ExitOnError)
 	fg.StringVar(&cmd.Url, "url", "", "URL to upload to")
-	fg.StringVar(&cmd.RunsDir, "dir", "", "Search this directory recursively for .run files and upload them")
-	fg.StringVar(&cmd.RunsFile, "file", "", "Either a .run file, or a .tar.gz file made with 'json-export'")
+	fg.StringVar(&cmd.Source, "src", "", "Either a .run file, a .tar.gz file containing runs, or a directory to recursively search")
 	cmd.Workers = 4
 	cmd.flags = fg
 	return cmd
@@ -60,9 +57,8 @@ func (cmd *UploadRunsCmd) Run() error {
 	if cmd.Url == "" {
 		return fmt.Errorf("must provide -url")
 	}
-	// If both are either empty, or both are given, error
-	if (cmd.RunsDir == "") == (cmd.RunsFile == "") {
-		return fmt.Errorf("must provide either -dir or -file, not both")
+	if cmd.Source == "" {
+		return fmt.Errorf("must provide either -src")
 	}
 
 	dstUrl, err := url.Parse(cmd.Url)
@@ -73,19 +69,21 @@ func (cmd *UploadRunsCmd) Run() error {
 
 	cmd.wp = NewWorkerPool(cmd.Workers, cmd.postWorker)
 	defer cmd.wp.Close()
-	// Handle directory
-	if cmd.RunsDir != "" {
-		return cmd.uploadDir(cmd.RunsDir)
-	} else if cmd.RunsFile != "" {
-		if strings.HasSuffix(cmd.RunsFile, ".tar.gz") {
-			return cmd.UploadTar(cmd.RunsFile)
-		} else {
-			fd, err := os.Open(cmd.RunsFile)
-			if err != nil {
-				return err
-			}
-			cmd.putFile(cmd.RunsFile, fd)
+
+	fi, err := os.Stat(cmd.Source)
+	if err != nil {
+		return err
+	}
+	if fi.IsDir() {
+		return cmd.uploadDir(cmd.Source)
+	} else if strings.HasSuffix(cmd.Source, ".tar.gz") {
+		return cmd.UploadTar(cmd.Source)
+	} else {
+		fd, err := os.Open(cmd.Source)
+		if err != nil {
+			return err
 		}
+		cmd.putFile(cmd.Source, fd)
 	}
 	return nil
 }
@@ -120,7 +118,7 @@ func (cmd *UploadRunsCmd) UploadTar(tarPath string) error {
 }
 
 func (cmd *UploadRunsCmd) uploadDir(dirPath string) error {
-	rootFs := os.DirFS(cmd.RunsDir)
+	rootFs := os.DirFS(dirPath)
 	return fs.WalkDir(rootFs, ".", func(fpath string, d fs.DirEntry, err error) error {
 		if d.Type().IsRegular() && path.Ext(fpath) == ".run" {
 			fd, err := rootFs.Open(fpath)
