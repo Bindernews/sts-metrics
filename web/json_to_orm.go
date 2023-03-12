@@ -15,36 +15,6 @@ import (
 	"github.com/samber/lo"
 )
 
-type OrmContext struct {
-	// String cache
-	Sc DbCache[string]
-	// Card cache
-	Cc DbCache[orm.CardSpec]
-	// ID of run in database
-	Runid int32
-}
-
-func (oc OrmContext) Copy() *OrmContext {
-	return &OrmContext{
-		Sc:    oc.Sc,
-		Cc:    oc.Cc,
-		Runid: 0,
-	}
-}
-
-type ConvToOrm[T any] interface {
-	ToOrm(oc *OrmContext, ix int) T
-}
-
-// Calls ToOrm on inp, returning the result
-func MapToOrm[T any, E ConvToOrm[T]](inp []E, oc *OrmContext) []T {
-	out := make([]T, len(inp))
-	for i, e := range inp {
-		out[i] = e.ToOrm(oc, i)
-	}
-	return out
-}
-
 // Make sure data is properly round-tripped.
 // It's not the fastest method, but oh well.
 func (j *RunSchemaJson) MarshalJSON() ([]byte, error) {
@@ -65,7 +35,7 @@ func (j *RunSchemaJson) MarshalJSON() ([]byte, error) {
 	return json.Marshal(raw)
 }
 
-func (c BossRelicChoice) ToOrm(oc *OrmContext, ix int) orm.AddBossRelicsParams {
+func (c BossRelicChoice) ToOrm(oc *OrmContext, ix int) any {
 	return orm.AddBossRelicsParams{
 		RunID:     oc.Runid,
 		NotPicked: oc.Sc.GetAll(c.NotPicked),
@@ -74,39 +44,61 @@ func (c BossRelicChoice) ToOrm(oc *OrmContext, ix int) orm.AddBossRelicsParams {
 	}
 }
 
-func (c *BossRelicChoice) GetStrings() []string {
-	return append([]string{c.Picked}, c.NotPicked...)
+func (c BossRelicChoice) Preload(oc *OrmContext, ix int) {
+	SetAdd(oc.StringSet, c.Picked)
+	SetAdd(oc.StringSet, c.NotPicked...)
+}
+
+// If the
+func (c CampfireChoice) parseData() (*orm.CardSpec, string) {
+	if c.Data != nil {
+		switch c.Key {
+		case "PURGE":
+		case "SMITH":
+			spec := CardNameSplit(*c.Data)
+			return &spec, ""
+		default:
+			return nil, *c.Data
+		}
+	}
+	return nil, ""
 }
 
 // Convert CampfireChoice to an orm object
-func (c CampfireChoice) ToOrm(oc *OrmContext, _ int) orm.AddCampfireParams {
-	return orm.AddCampfireParams{
+func (c CampfireChoice) ToOrm(oc *OrmContext, _ int) any {
+	out := orm.AddCampfireParams{
 		RunID: oc.Runid,
-		Data:  oc.Sc.MaybeGet(c.Data),
 		Key:   oc.Sc.Get(c.Key),
 		Floor: int32(c.Floor),
 	}
+	spec, str := c.parseData()
+	if spec != nil {
+		out.CardData = sql.NullInt32{Int32: oc.Cc.Get(*spec), Valid: true}
+	}
+	if str != "" {
+		out.StrData = sql.NullInt32{Int32: oc.Sc.Get(str), Valid: true}
+	}
+	return out
 }
 
-func (c *CampfireChoice) GetStrings() []string {
-	data := ""
-	if c.Data != nil {
-		data = *c.Data
+func (c CampfireChoice) Preload(oc *OrmContext, _ int) {
+	spec, str := c.parseData()
+	oc.StringSet[c.Key] = true
+	if spec != nil {
+		oc.CardSet[*spec] = true
 	}
-	return []string{c.Key, data}
+	if str != "" {
+		oc.StringSet[str] = true
+	}
 }
 
 // Convert CardChoice to intermediary form
-func (c CardChoice) ToOrm(oc *OrmContext, _ int) CardChoiceParsed {
-	cp := CardChoiceParsed{
+func (c CardChoice) ToOrm(oc *OrmContext, _ int) any {
+	return CardChoiceParsed{
 		Floor:     int(c.Floor),
-		NotPicked: make([]orm.CardSpec, len(c.NotPicked)),
+		NotPicked: StringsToCards(c.NotPicked),
 		Picked:    CardNameSplit(c.Picked),
 	}
-	for i, v := range c.NotPicked {
-		cp.NotPicked[i] = CardNameSplit(v)
-	}
-	return cp
 }
 
 // Pre-parsed version of CardChoice
@@ -116,11 +108,7 @@ type CardChoiceParsed struct {
 	Picked    orm.CardSpec
 }
 
-func (cp CardChoiceParsed) GetCards() []orm.CardSpec {
-	return append([]orm.CardSpec{cp.Picked}, cp.NotPicked...)
-}
-
-func (cp CardChoiceParsed) ToOrm(oc *OrmContext, _ int) orm.AddCardChoiceParams {
+func (cp CardChoiceParsed) ToOrm(oc *OrmContext, _ int) any {
 	return orm.AddCardChoiceParams{
 		RunID:     oc.Runid,
 		Floor:     int32(cp.Floor),
@@ -129,7 +117,12 @@ func (cp CardChoiceParsed) ToOrm(oc *OrmContext, _ int) orm.AddCardChoiceParams 
 	}
 }
 
-func (c DamageTaken) ToOrm(oc *OrmContext, _ int) orm.AddDamageTakenParams {
+func (cp CardChoiceParsed) Preload(oc *OrmContext, _ int) {
+	SetAdd(oc.CardSet, cp.NotPicked...)
+	SetAdd(oc.CardSet, cp.Picked)
+}
+
+func (c DamageTaken) ToOrm(oc *OrmContext, _ int) any {
 	return orm.AddDamageTakenParams{
 		RunID:   oc.Runid,
 		Floor:   int32(c.Floor),
@@ -139,11 +132,11 @@ func (c DamageTaken) ToOrm(oc *OrmContext, _ int) orm.AddDamageTakenParams {
 	}
 }
 
-func (c *DamageTaken) GetStrings() []string {
-	return []string{c.Enemies}
+func (c DamageTaken) Preload(oc *OrmContext, _ int) {
+	SetAdd(oc.StringSet, c.Enemies)
 }
 
-func (c EventChoice) ToOrm(oc *OrmContext, _ int) orm.AddEventChoicesParams {
+func (c EventChoice) ToOrm(oc *OrmContext, _ int) any {
 	return orm.AddEventChoicesParams{
 		RunID:             oc.Runid,
 		DamageDelta:       int32(c.DamageHealed - c.DamageTaken),
@@ -156,11 +149,12 @@ func (c EventChoice) ToOrm(oc *OrmContext, _ int) orm.AddEventChoicesParams {
 	}
 }
 
-func (c *EventChoice) GetStrings() []string {
-	return append([]string{c.EventName, c.PlayerChoice}, c.RelicsObtained...)
+func (c EventChoice) Preload(oc *OrmContext, _ int) {
+	SetAdd(oc.StringSet, c.EventName, c.PlayerChoice)
+	SetAdd(oc.StringSet, c.RelicsObtained...)
 }
 
-func (c PotionObtained) ToOrm(oc *OrmContext, _ int) orm.AddPotionObtainParams {
+func (c PotionObtained) ToOrm(oc *OrmContext, _ int) any {
 	return orm.AddPotionObtainParams{
 		RunID: oc.Runid,
 		Floor: int16(c.Floor),
@@ -168,11 +162,11 @@ func (c PotionObtained) ToOrm(oc *OrmContext, _ int) orm.AddPotionObtainParams {
 	}
 }
 
-func (c *PotionObtained) GetStrings() []string {
-	return []string{c.Key}
+func (c PotionObtained) Preload(oc *OrmContext, _ int) {
+	SetAdd(oc.StringSet, c.Key)
 }
 
-func (s RelicObtain) ToOrm(oc *OrmContext, _ int) orm.AddRelicObtainParams {
+func (s RelicObtain) ToOrm(oc *OrmContext, _ int) any {
 	return orm.AddRelicObtainParams{
 		RunID: oc.Runid,
 		Floor: int16(s.Floor),
@@ -180,8 +174,8 @@ func (s RelicObtain) ToOrm(oc *OrmContext, _ int) orm.AddRelicObtainParams {
 	}
 }
 
-func (c *RelicObtain) GetStrings() []string {
-	return []string{c.Key}
+func (c RelicObtain) Preload(oc *OrmContext, _ int) {
+	oc.StringSet[c.Key] = true
 }
 
 func (s *RunSchemaJson) ToAddRunRaw(oc *OrmContext) orm.AddRunRawParams {
@@ -236,33 +230,6 @@ func (s *RunSchemaJson) toPerFloorOrm(oc *OrmContext, runid int32) []orm.AddPerF
 	return out
 }
 
-func (s RunSchemaJson) getOtherStrings() []string {
-	out := []string{}
-	out = append(out, s.DailyMods...)
-	out = append(out, s.ItemsPurchased...)
-	out = append(out, s.ItemsPurged...)
-	out = append(out, s.Relics...)
-	for _, u := range s.BossRelics {
-		out = append(out, u.GetStrings()...)
-	}
-	for _, u := range s.CampfireChoices {
-		out = append(out, u.GetStrings()...)
-	}
-	for _, u := range s.DamageTaken {
-		out = append(out, u.GetStrings()...)
-	}
-	for _, u := range s.EventChoices {
-		out = append(out, u.GetStrings()...)
-	}
-	for _, u := range s.PotionsObtained {
-		out = append(out, u.GetStrings()...)
-	}
-	for _, u := range s.RelicsObtained {
-		out = append(out, u.GetStrings()...)
-	}
-	return out
-}
-
 func (s RunSchemaJson) getMinimalStrings() []string {
 	return []string{s.BuildVersion, s.CharacterChosen, s.KilledBy, s.NeowBonus, s.NeowCost}
 }
@@ -281,24 +248,27 @@ func (r *RunSchemaJson) AddToDb(ctx context.Context, oc *OrmContext, db *orm.Que
 	}
 	oc.Runid = runId
 
-	// Cache other strings
-	if err = oc.Sc.Load(ctx, r.getOtherStrings()); err != nil {
-		return
-	}
-
-	// Parse deck and other card information so we can cache CardSpecs
-	deck := NewMasterDeck()
-	deck.AddCards(r.MasterDeck)
+	// Gather preload data
+	PreloadArray(oc, r.BossRelics)
+	PreloadArray(oc, r.CampfireChoices)
+	parsedCards := MapToOrm[CardChoiceParsed](oc, CastSlice[ConvToOrm](r.CardChoices))
+	PreloadArray(oc, parsedCards)
+	PreloadArray(oc, r.DamageTaken)
+	PreloadArray(oc, r.EventChoices)
+	PreloadArray(oc, r.PotionsObtained)
+	PreloadArray(oc, r.RelicsObtained)
 	// Parse items purchased + purged
 	specsPurchased := StringsToCards(r.ItemsPurchased)
 	specsPurged := StringsToCards(r.ItemsPurged)
-	// Parse card choices
-	parsedCards := MapToOrm[CardChoiceParsed](r.CardChoices, oc)
-	ormCardSpecs := lo.FlatMap(parsedCards, func(cp CardChoiceParsed, _ int) []orm.CardSpec {
-		return cp.GetCards()
-	})
+	// Parse deck
+	specsDeck := StringsToCards(r.MasterDeck)
+
+	// Cache strings
+	if err = oc.Sc.Load(ctx, r.DailyMods, r.Relics, lo.Keys(oc.StringSet)); err != nil {
+		return
+	}
 	// Cache CardSpecs
-	if err = oc.Cc.Load(ctx, ormCardSpecs, deck.GetCards(), specsPurchased, specsPurged); err != nil {
+	if err = oc.Cc.Load(ctx, specsPurchased, specsPurged, specsDeck, lo.Keys(oc.CardSet)); err != nil {
 		return
 	}
 
@@ -327,7 +297,7 @@ func (r *RunSchemaJson) AddToDb(ctx context.Context, oc *OrmContext, db *orm.Que
 		return
 	}
 	// Add card choices
-	cardChoices := MapToOrm[orm.AddCardChoiceParams](parsedCards, oc)
+	cardChoices := MapToOrm[orm.AddCardChoiceParams](oc, CastSlice[ConvToOrm](parsedCards))
 	if _, err = db.AddCardChoice(ctx, cardChoices); err != nil {
 		return
 	}
@@ -342,11 +312,20 @@ func (r *RunSchemaJson) AddToDb(ctx context.Context, oc *OrmContext, db *orm.Que
 	if _, err = db.AddRunArrays(ctx, ormArrays); err != nil {
 		return
 	}
-	if _, err = db.AddMasterDeck(ctx, deck.ToOrm(oc)); err != nil {
+	// Add master deck
+	deckCounts := lo.CountValues(specsDeck)
+	ormDeck := make([]orm.AddMasterDeckParams, 0, len(specsDeck))
+	for card, ct := range deckCounts {
+		ormDeck = append(ormDeck, orm.AddMasterDeckParams{
+			RunID:  oc.Runid,
+			CardID: oc.Cc.Get(card),
+			Count:  int16(ct),
+		})
+	}
+	if _, err = db.AddMasterDeck(ctx, ormDeck); err != nil {
 		return
 	}
-
-	// Flags
+	// Add flags
 	flags := map[string]bool{
 		"ascension": r.IsAscensionMode,
 		"beta":      r.IsBeta,
@@ -384,27 +363,27 @@ func (r *RunSchemaJson) AddToDb(ctx context.Context, oc *OrmContext, db *orm.Que
 	if _, err = db.AddPerFloor(ctx, perFloor); err != nil {
 		return
 	}
-	ormBossRelics := MapToOrm[orm.AddBossRelicsParams](r.BossRelics, oc)
+	ormBossRelics := MapToOrm[orm.AddBossRelicsParams](oc, CastSlice[ConvToOrm](r.BossRelics))
 	if _, err = db.AddBossRelics(ctx, ormBossRelics); err != nil {
 		return
 	}
-	ormCampfires := MapToOrm[orm.AddCampfireParams](r.CampfireChoices, oc)
+	ormCampfires := MapToOrm[orm.AddCampfireParams](oc, CastSlice[ConvToOrm](r.CampfireChoices))
 	if _, err = db.AddCampfire(ctx, ormCampfires); err != nil {
 		return
 	}
-	ormDamageTaken := MapToOrm[orm.AddDamageTakenParams](r.DamageTaken, oc)
+	ormDamageTaken := MapToOrm[orm.AddDamageTakenParams](oc, CastSlice[ConvToOrm](r.DamageTaken))
 	if _, err = db.AddDamageTaken(ctx, ormDamageTaken); err != nil {
 		return
 	}
-	ormEvents := MapToOrm[orm.AddEventChoicesParams](r.EventChoices, oc)
+	ormEvents := MapToOrm[orm.AddEventChoicesParams](oc, CastSlice[ConvToOrm](r.EventChoices))
 	if _, err = db.AddEventChoices(ctx, ormEvents); err != nil {
 		return
 	}
-	ormPotions := MapToOrm[orm.AddPotionObtainParams](r.PotionsObtained, oc)
+	ormPotions := MapToOrm[orm.AddPotionObtainParams](oc, CastSlice[ConvToOrm](r.PotionsObtained))
 	if _, err = db.AddPotionObtain(ctx, ormPotions); err != nil {
 		return
 	}
-	ormRelics := MapToOrm[orm.AddRelicObtainParams](r.RelicsObtained, oc)
+	ormRelics := MapToOrm[orm.AddRelicObtainParams](oc, CastSlice[ConvToOrm](r.RelicsObtained))
 	if _, err = db.AddRelicObtain(ctx, ormRelics); err != nil {
 		return
 	}

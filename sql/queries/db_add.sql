@@ -18,7 +18,7 @@ SELECT count(id)::boolean FROM RunsData R WHERE R.play_id = $1;
 -- name: AddFlag :exec
 INSERT INTO RunFlags (run_id, flag) VALUES ($1, $2);
 -- name: AddCampfire :copyfrom
-INSERT INTO CampfireChoice (run_id, "data", floor, "key") VALUES ($1,$2,$3,$4);
+INSERT INTO CampfireChoice (run_id, str_data, card_data, floor, "key") VALUES ($1,$2,$3,$4,$5);
 -- name: AddDamageTaken :copyfrom
 INSERT INTO DamageTaken (run_id, enemies, damage, floor, turns) VALUES ($1,$2,$3,$4,$5);
 -- name: AddCardChoice :copyfrom

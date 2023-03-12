@@ -67,11 +67,12 @@ type Bossrelic struct {
 }
 
 type Campfirechoice struct {
-	ID    int32
-	RunID int32
-	Data  sql.NullInt32
-	Floor int32
-	Key   int32
+	ID       int32
+	RunID    int32
+	StrData  sql.NullInt32
+	CardData sql.NullInt32
+	Floor    int32
+	Key      int32
 }
 
 type Cardchoice struct {

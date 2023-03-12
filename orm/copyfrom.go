@@ -65,7 +65,8 @@ func (r *iteratorForAddCampfire) Next() bool {
 func (r iteratorForAddCampfire) Values() ([]interface{}, error) {
 	return []interface{}{
 		r.rows[0].RunID,
-		r.rows[0].Data,
+		r.rows[0].StrData,
+		r.rows[0].CardData,
 		r.rows[0].Floor,
 		r.rows[0].Key,
 	}, nil
@@ -76,7 +77,7 @@ func (r iteratorForAddCampfire) Err() error {
 }
 
 func (q *Queries) AddCampfire(ctx context.Context, arg []AddCampfireParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"campfirechoice"}, []string{"run_id", "data", "floor", "key"}, &iteratorForAddCampfire{rows: arg})
+	return q.db.CopyFrom(ctx, []string{"campfirechoice"}, []string{"run_id", "str_data", "card_data", "floor", "key"}, &iteratorForAddCampfire{rows: arg})
 }
 
 // iteratorForAddCardChoice implements pgx.CopyFromSource.

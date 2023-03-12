@@ -95,3 +95,19 @@ func StripRequestPrefix(suffix string) gin.HandlerFunc {
 		}
 	}
 }
+
+// Cast an any-slice to the destination type
+func CastSlice[D, S any](src []S) []D {
+	dst := make([]D, len(src))
+	for i, v := range src {
+		dst[i] = any(v).(D)
+	}
+	return dst
+}
+
+// Set all values from 'values' to true in 'st'.
+func SetAdd[T comparable](st map[T]bool, values ...T) {
+	for _, v := range values {
+		st[v] = true
+	}
+}
