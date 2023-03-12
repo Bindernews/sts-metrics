@@ -9,13 +9,37 @@ CREATE TABLE StrCache(
 -- Add empty string to cache
 INSERT INTO StrCache(str) VALUES ('');
 
+-- Tracks newly-added strings, to help identify and clean up spam
+CREATE TABLE StrCacheNew(
+    id int not null primary key references StrCache(id),
+    added timestamp not null default now()
+);
+
+-- Trigger to auto-add StrCacheNew entry on insert
+CREATE OR REPLACE FUNCTION str_cache_new_insert() RETURNS TRIGGER
+LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO StrCacheNew(id) VALUES (NEW.id);
+    RETURN NEW;
+END;
+$$;
+-- Assign trigger
+CREATE OR REPLACE TRIGGER str_cache_new_insert_trg
+    AFTER INSERT ON StrCache
+    FOR EACH ROW
+    EXECUTE FUNCTION str_cache_new_insert();
+
+-- Adds entries to StrCache only if they don't already exist.
 CREATE OR REPLACE FUNCTION str_cache_add(s text[]) RETURNS void
 LANGUAGE SQL AS $$
-    WITH newstr AS (SELECT t.t FROM unnest(s) t JOIN StrCache ON t != StrCache.str)
-    INSERT INTO StrCache(str) SELECT t FROM newstr
+    INSERT INTO StrCache(str)
+    SELECT t FROM unnest(s) t
+    WHERE NOT exists(SELECT str FROM StrCache s WHERE s.str = t)
     ON CONFLICT DO NOTHING;
 $$;
 
+-- Takes an array of strings and returns a tables of their IDs in the same order
+-- as the array was originally provided.
 CREATE OR REPLACE FUNCTION str_cache_to_id(s text[]) RETURNS TABLE(id int)
 LANGUAGE SQL AS $$
     WITH str_list AS (SELECT row_number() over () as ix, t FROM (SELECT unnest(s) as t) list)
@@ -43,7 +67,6 @@ CREATE TABLE CardSpecs(
     upgrades int not null,
     unique (card, upgrades)
 );
-
 CREATE INDEX ON CardSpecs USING btree (card);
 
 -- CardSpecs with suffix already calculated
@@ -56,7 +79,26 @@ CREATE VIEW CardSpecsEx AS
     FROM c
 );
 
+-- Track newly added card specs
+CREATE TABLE CardSpecsNew
+(
+    id int not null primary key references CardSpecs(id),
+    added timestamp not null default now()
+);
+CREATE FUNCTION card_specs_new_insert() RETURNS TRIGGER
+LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO CardSpecsNew (id) VALUES (NEW.id);
+    RETURN NEW;
+END;
+$$;
+-- Assign trigger
+CREATE TRIGGER card_specs_new_insert_trg
+    AFTER INSERT ON CardSpecs
+    FOR EACH ROW
+    EXECUTE FUNCTION card_specs_new_insert();
 
+-- Helper type used to pass data to/from clients
 CREATE TYPE card_spec_io AS (card text, upg int);
 
 CREATE FUNCTION card_spec_add(cards_in card_spec_io[]) RETURNS void
@@ -128,8 +170,11 @@ CREATE TABLE RunsData(
     victory boolean not null,
     -- WinRate corresponds to the JSON schema field "win_rate".
     win_rate float not null,
+    -- When the run was added to the DB (not when it was created)
+    added timestamp not null default now(),
     UNIQUE (play_id)
 );
+-- We do a LOT of joins to select runs with a given character ID.
 CREATE INDEX runsdata_character_index ON RunsData (character_id);
 
 CREATE TYPE flag_kind AS ENUM (
@@ -490,9 +535,19 @@ $$;
 
 ---- create above / drop below ----
 
+drop function if exists run_to_json;
+
 drop trigger if exists character_list_refresh ON RunsData;
 drop function if exists character_list_refresh;
 drop materialized view if exists character_list;
+
+drop trigger if exists str_cache_new_insert_trg ON StrCache;
+drop function if exists str_cache_new_insert;
+drop table if exists StrCacheNew;
+
+drop trigger if exists card_specs_new_insert_trg ON CardSpecs;
+drop function if exists card_specs_new_insert;
+drop table if exists CardSpecsNew;
 
 drop table if exists MasterDecks;
 drop table if exists EventChoices;
@@ -515,7 +570,6 @@ drop table if exists CardSpecs;
 drop table if exists RunsData;
 drop table if exists StrCache;
 drop type if exists flag_kind;
-drop function if exists run_to_json;
 drop function if exists get_str;
 drop function if exists str_cache_add;
 drop function if exists str_cache_to_id;

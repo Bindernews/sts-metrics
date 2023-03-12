@@ -20,34 +20,17 @@ const usage = `Usage of %s:
       Config file (default "%s")
 `
 
-var (
-	optConfig = flag.String("config", "config.toml", "")
-)
-
-func init() {
-	flag.StringVar(optConfig, "c", "config.toml", "")
-
-	flag.Usage = func() {
-		fmt.Printf(usage,
-			os.Args[0],
-			flag.Lookup("config").DefValue,
-		)
-	}
-}
-
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Fatalf("Error loading .env file: %+v", err)
 	}
-	flag.Parse()
 
-	srv := new(web.Services)
-	r := gin.Default()
-	if err := setup(srv, r); err != nil {
+	cmd := MainCmd{}
+	if err := cmd.setup(); err != nil {
 		log.Fatalln(err)
 	}
 
-	server := &http.Server{Addr: srv.Config.Listen, Handler: r}
+	server := &http.Server{Addr: cmd.srv.Config.Listen, Handler: cmd.r}
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalln(err)
@@ -60,15 +43,33 @@ func main() {
 	server.Shutdown(context.Background())
 }
 
-func setup(srv *web.Services, r *gin.Engine) (err error) {
-	if err = srv.LoadDefaults(); err != nil {
+type MainCmd struct {
+	Config string
+	r      *gin.Engine
+	srv    *web.Services
+}
+
+func (m *MainCmd) setup() (err error) {
+	flag.StringVar(&m.Config, "config", "config.toml", "")
+	flag.StringVar(&m.Config, "c", "config.toml", "")
+	flag.Usage = func() {
+		fmt.Printf(usage,
+			os.Args[0],
+			flag.Lookup("config").DefValue,
+		)
+	}
+	flag.Parse()
+
+	m.srv = new(web.Services)
+	m.r = gin.Default()
+	if err = m.srv.LoadDefaults(); err != nil {
 		return
 	}
-	if err = srv.Config.LoadFile(*optConfig, false); err != nil {
+	if err = m.srv.Config.LoadFile(m.Config, false); err != nil {
 		return
 	}
-	ctrlMain := web.MainController{Srv: srv}
-	if err = ctrlMain.Init(r); err != nil {
+	ctrlMain := web.MainController{Srv: m.srv}
+	if err = ctrlMain.Init(m.r); err != nil {
 		return
 	}
 	return

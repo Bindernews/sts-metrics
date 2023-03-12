@@ -1,4 +1,7 @@
 
+CREATE SCHEMA IF NOT EXISTS auth;
+SET search_path TO auth, public;
+
 CREATE TABLE IF NOT EXISTS users(
     id serial primary key ,
     email text not null unique
@@ -52,19 +55,19 @@ LANGUAGE SQL AS $$
 $$;
 
 -- TEST DATA
--- SELECT user_add({{ .test_user }});
 INSERT INTO scopes(key, "desc")
 VALUES
     ('stats:view', 'Ability to view statistics'),
     ('getrun', 'Retrieve runs as JSON data'),
     ('admin', 'Access the admin interface');
--- SELECT user_set_scopes({{ .test_user }}, '{stats:view}');
 
 ---- create above / drop below ----
 
+set search_path to auth,public;
 drop table if exists users_to_scopes;
 drop table if exists scopes;
 drop table if exists users;
 drop function if exists user_add;
 drop function if exists user_set_scopes;
 drop function if exists user_has_scopes;
+drop schema if exists auth;
