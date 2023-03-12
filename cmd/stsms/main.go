@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/bindernews/sts-msr/web"
 	"github.com/gin-gonic/gin"
@@ -46,23 +48,16 @@ func main() {
 	}
 
 	server := &http.Server{Addr: srv.Config.Listen, Handler: r}
-	go safeServe(server)
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalln(err)
+		}
+	}()
 
-	adminRouter := gin.Default()
-	adminServer := &http.Server{Addr: srv.Config.AdminListen, Handler: adminRouter}
-	adminRouter.POST("/stop", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
-		ctx := context.Background()
-		server.Shutdown(ctx)
-		adminServer.Shutdown(ctx)
-	})
-	safeServe(adminServer)
-}
-
-func safeServe(server *http.Server) {
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalln(err)
-	}
+	sigC := make(chan os.Signal, 1)
+	signal.Notify(sigC, os.Interrupt, syscall.SIGTERM)
+	<-sigC
+	server.Shutdown(context.Background())
 }
 
 func setup(srv *web.Services, r *gin.Engine) (err error) {
