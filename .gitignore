@@ -4,3 +4,4 @@ data/
 tern.conf
 .env
 __pycache__
+*.exe

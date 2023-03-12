@@ -51,10 +51,14 @@ reset-db:
     just migrate 0
     just migrate last
 
-upload-runs DIR URL:
-    cd "{{DIR}}" && \
-    for fn in $(find . -iname "*.run" -o -iname "*.run.gz"); do \
-      echo -n "$fn "; \
-      if [ "${fn##*.}" == "gz" ]; then gzip -dc "$fn"; else cat "$fn"; fi | curl -X POST "{{URL}}" --data-binary "@-"; \
-      echo; \
-    done
+# Install smtool CLI
+install-smtool:
+    go install ./cmd/smtool
+
+# Upload runs using swiss
+upload-runs DIR URL: (install-smtool)
+    smtool upload-runs -url {{URL}} -dir {{DIR}}
+
+# Export raw run archives to a .tar.gz file
+export-runs TAR_FILE: (install-smtool)
+    smtool export-runs -out {{TAR_FILE}}

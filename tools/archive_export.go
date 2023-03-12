@@ -24,7 +24,7 @@ type ArchiveExportCmd struct {
 
 func NewArchiveExportCmd() *ArchiveExportCmd {
 	cmd := new(ArchiveExportCmd)
-	fg := flag.NewFlagSet("json-export", flag.ExitOnError)
+	fg := flag.NewFlagSet("export-runs", flag.ExitOnError)
 	defaultOut := fmt.Sprintf("json-archive_%s.tar.gz", time.Now().UTC().Format(time.RFC3339))
 	fg.StringVar(&cmd.OutFile, "out", defaultOut, "Output file name")
 	cmd.flags = fg
@@ -33,6 +33,10 @@ func NewArchiveExportCmd() *ArchiveExportCmd {
 
 func (cmd *ArchiveExportCmd) Flags() *flag.FlagSet {
 	return cmd.flags
+}
+
+func (cmd *ArchiveExportCmd) Description() string {
+	return `export runs from the raw archive table into a .tar.gz file`
 }
 
 func (cmd *ArchiveExportCmd) Run() error {

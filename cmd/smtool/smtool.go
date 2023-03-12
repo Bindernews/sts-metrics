@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/bindernews/sts-msr/tools"
 	"github.com/joho/godotenv"
@@ -23,6 +22,7 @@ func main() {
 func rootCommand(args []string) error {
 	commands := []tools.ICommand{
 		tools.NewArchiveExportCmd(),
+		tools.NewUploadRunsCmd(),
 	}
 	// Make sure we have at least one arg, so we can get through
 	// the loop and print the subcommand names
@@ -30,10 +30,8 @@ func rootCommand(args []string) error {
 		args = append(args, "")
 	}
 	subcommand := args[0]
-	names := make([]string, 0)
 	for _, cmd := range commands {
 		cmdName := cmd.Flags().Name()
-		names = append(names, cmdName)
 		if cmdName == subcommand {
 			if err := cmd.Flags().Parse(args[1:]); err != nil {
 				return err
@@ -44,6 +42,15 @@ func rootCommand(args []string) error {
 			return nil
 		}
 	}
+
 	// No command found
-	return fmt.Errorf("subcommands: %s", strings.Join(names, ", "))
+	if args[0] == "-h" || args[0] == "--help" {
+		fmt.Println("subcommands:")
+		for _, cmd := range commands {
+			fmt.Printf("  %-12s %s\n", cmd.Flags().Name(), cmd.Description())
+		}
+		return nil
+	} else {
+		return fmt.Errorf("use --help for usage")
+	}
 }
