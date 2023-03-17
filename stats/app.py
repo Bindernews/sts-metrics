@@ -157,7 +157,7 @@ with tabCharacter:
         st.markdown('''
         ## Percentage of Times a Card was Chosen
         ''')
-        q = sa.text('SELECT * FROM card_pick_stats_merged(:char_id)').bindparams(char_id=char_id)
+        q = sa.text('SELECT * FROM card_pick_stats(:char_id, true)').bindparams(char_id=char_id)
         df = query(q)
         filt = st.text_input('Filter', key=KEYP+'_filter')
         if filt != '':

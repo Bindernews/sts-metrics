@@ -21,7 +21,7 @@ LANGUAGE plpgsql AS $$
 BEGIN
     INSERT INTO StrCacheNew(id) VALUES (NEW.id);
     RETURN NEW;
-END;
+END
 $$;
 -- Assign trigger
 CREATE OR REPLACE TRIGGER str_cache_new_insert_trg
