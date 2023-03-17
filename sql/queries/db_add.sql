@@ -34,7 +34,7 @@ INSERT INTO EventChoices
 VALUES
     ($1,$2,$3,$4,$5,$6,$7,$8);
 -- name: AddMasterDeck :copyfrom
-INSERT INTO MasterDecks (run_id, card_id, count) VALUES ($1,$2,$3);
+INSERT INTO MasterDecks (run_id, card_id, ix) VALUES ($1,$2,$3);
 -- name: AddBossRelics :copyfrom
 INSERT INTO BossRelics (run_id, not_picked, picked, ord) VALUES ($1,$2,$3,$4);
 -- name: AddPerFloor :copyfrom

@@ -82,7 +82,7 @@ type AddItemsPurgedParams struct {
 type AddMasterDeckParams struct {
 	RunID  int32
 	CardID int32
-	Count  int16
+	Ix     int16
 }
 
 type AddPerFloorParams struct {
@@ -281,7 +281,7 @@ func (q *Queries) DoesRunExist(ctx context.Context, playID string) (bool, error)
 }
 
 const getRun = `-- name: GetRun :one
-SELECT id, ascension_level, build_version, campfire_rested, campfire_upgraded, character_id, choose_seed, circlet_count, floor_reached, gold, killed_by, local_time, neow_bonus_id, neow_cost_id, path_per_floor, path_taken, play_id, player_experience, playtime, purchased_purges, score, seed_played, seed_source_timestamp, special_seed, timestamp, victory, win_rate FROM RunsData WHERE id = $1 LIMIT 1
+SELECT id, ascension_level, build_version, campfire_rested, campfire_upgraded, character_id, choose_seed, circlet_count, floor_reached, gold, killed_by, local_time, neow_bonus_id, neow_cost_id, path_per_floor, path_taken, play_id, player_experience, playtime, purchased_purges, score, seed_played, seed_source_timestamp, special_seed, timestamp, victory, win_rate, added FROM RunsData WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetRun(ctx context.Context, id int32) (Runsdatum, error) {
@@ -315,6 +315,7 @@ func (q *Queries) GetRun(ctx context.Context, id int32) (Runsdatum, error) {
 		&i.Timestamp,
 		&i.Victory,
 		&i.WinRate,
+		&i.Added,
 	)
 	return i, err
 }

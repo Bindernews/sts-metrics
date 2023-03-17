@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgtype"
 )
@@ -75,6 +76,14 @@ type Campfirechoice struct {
 	Key      int32
 }
 
+type Campfirechoicesstring struct {
+	ID    int32
+	RunID int32
+	Data  interface{}
+	Floor int32
+	Key   string
+}
+
 type Cardchoice struct {
 	ID        int32
 	RunID     int32
@@ -95,6 +104,11 @@ type Cardspecsex struct {
 	Upgrades int32
 	Suffix   string
 	CardFull interface{}
+}
+
+type Cardspecsnew struct {
+	ID    int32
+	Added time.Time
 }
 
 type CharacterList struct {
@@ -139,7 +153,7 @@ type Masterdeck struct {
 	ID     int32
 	RunID  int32
 	CardID int32
-	Count  int16
+	Ix     int16
 }
 
 type Perfloordatum struct {
@@ -217,6 +231,7 @@ type Runsdatum struct {
 	Timestamp           sql.NullTime
 	Victory             bool
 	WinRate             float64
+	Added               time.Time
 }
 
 type Scope struct {
@@ -246,6 +261,11 @@ type StatsOverview struct {
 type Strcache struct {
 	ID  int32
 	Str string
+}
+
+type Strcachenew struct {
+	ID    int32
+	Added time.Time
 }
 
 type User struct {

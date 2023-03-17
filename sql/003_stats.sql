@@ -3,7 +3,7 @@ CREATE VIEW stats_overview AS (
     WITH
         co AS (SELECT '{0.25, 0.5, 0.75}'::float[] as p_quart),
         deck_size AS (
-            SELECT R.id, sum(D.count) as total
+            SELECT R.id, count(D.ix) as total
             FROM RunsData R INNER JOIN MasterDecks D ON R.id = D.run_id
             GROUP BY R.id
         )
@@ -25,8 +25,8 @@ CREATE VIEW stats_card_counts AS (
     SELECT
         R.character_id as char_id,
         D.card_id,
-        sum(D.count) as total,
-        sum(case when S.upgrades > 0 then D.count else 0 end) as upgrades
+        count(D.ix) as total,
+        sum(case when S.upgrades > 0 then 1 else 0 end) as upgrades
     FROM RunsData R
     JOIN MasterDecks D ON R.id = D.run_id
     JOIN CardSpecs S ON D.card_id = S.id
@@ -37,7 +37,7 @@ CREATE VIEW stats_card_counts AS (
 CREATE FUNCTION per_character_card_stats(char_id int) RETURNS
     TABLE(card_id int, card text, runs int, wins int, deck float4[], floor float4[])
 LANGUAGE SQL AS $$
-WITH ru AS (SELECT r.id, r.floor_reached, r.victory, sum(m.count) as deck_size
+WITH ru AS (SELECT r.id, r.floor_reached, r.victory, count(m.id) as deck_size
             FROM runsdata r
                      INNER JOIN masterdecks m on r.id = m.run_id
             WHERE r.character_id = char_id

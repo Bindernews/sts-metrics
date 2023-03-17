@@ -280,7 +280,7 @@ func (r iteratorForAddMasterDeck) Values() ([]interface{}, error) {
 	return []interface{}{
 		r.rows[0].RunID,
 		r.rows[0].CardID,
-		r.rows[0].Count,
+		r.rows[0].Ix,
 	}, nil
 }
 
@@ -289,7 +289,7 @@ func (r iteratorForAddMasterDeck) Err() error {
 }
 
 func (q *Queries) AddMasterDeck(ctx context.Context, arg []AddMasterDeckParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"masterdecks"}, []string{"run_id", "card_id", "count"}, &iteratorForAddMasterDeck{rows: arg})
+	return q.db.CopyFrom(ctx, []string{"masterdecks"}, []string{"run_id", "card_id", "ix"}, &iteratorForAddMasterDeck{rows: arg})
 }
 
 // iteratorForAddPerFloor implements pgx.CopyFromSource.
