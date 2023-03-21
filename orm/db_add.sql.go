@@ -79,12 +79,6 @@ type AddItemsPurgedParams struct {
 	Floor  int16
 }
 
-type AddMasterDeckParams struct {
-	RunID  int32
-	CardID int32
-	Ix     int16
-}
-
 type AddPerFloorParams struct {
 	RunID     int32
 	Floor     int16
@@ -108,6 +102,7 @@ type AddRelicObtainParams struct {
 type AddRunArraysParams struct {
 	RunID               int32
 	DailyMods           []int32
+	MasterDeck          []int32
 	PotionsFloorSpawned []int32
 	PotionsFloorUsage   []int32
 	RelicIds            []int32

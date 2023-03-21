@@ -62,3 +62,7 @@ upload-runs DIR URL: (install-smtool)
 # Export raw run archives to a .tar.gz file
 export-runs TAR_FILE: (install-smtool)
     smtool export-runs -out {{TAR_FILE}}
+
+# Run pg_dump in docker
+pg-dump OUT:
+    {{win_prefix}} docker exec sts-metrics-server-db-1 pg_dump -U postgres >{{OUT}}

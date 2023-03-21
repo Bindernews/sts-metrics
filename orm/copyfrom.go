@@ -258,40 +258,6 @@ func (q *Queries) AddItemsPurged(ctx context.Context, arg []AddItemsPurgedParams
 	return q.db.CopyFrom(ctx, []string{"itemspurged"}, []string{"run_id", "card_id", "floor"}, &iteratorForAddItemsPurged{rows: arg})
 }
 
-// iteratorForAddMasterDeck implements pgx.CopyFromSource.
-type iteratorForAddMasterDeck struct {
-	rows                 []AddMasterDeckParams
-	skippedFirstNextCall bool
-}
-
-func (r *iteratorForAddMasterDeck) Next() bool {
-	if len(r.rows) == 0 {
-		return false
-	}
-	if !r.skippedFirstNextCall {
-		r.skippedFirstNextCall = true
-		return true
-	}
-	r.rows = r.rows[1:]
-	return len(r.rows) > 0
-}
-
-func (r iteratorForAddMasterDeck) Values() ([]interface{}, error) {
-	return []interface{}{
-		r.rows[0].RunID,
-		r.rows[0].CardID,
-		r.rows[0].Ix,
-	}, nil
-}
-
-func (r iteratorForAddMasterDeck) Err() error {
-	return nil
-}
-
-func (q *Queries) AddMasterDeck(ctx context.Context, arg []AddMasterDeckParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"masterdecks"}, []string{"run_id", "card_id", "ix"}, &iteratorForAddMasterDeck{rows: arg})
-}
-
 // iteratorForAddPerFloor implements pgx.CopyFromSource.
 type iteratorForAddPerFloor struct {
 	rows                 []AddPerFloorParams
@@ -418,6 +384,7 @@ func (r iteratorForAddRunArrays) Values() ([]interface{}, error) {
 	return []interface{}{
 		r.rows[0].RunID,
 		r.rows[0].DailyMods,
+		r.rows[0].MasterDeck,
 		r.rows[0].PotionsFloorSpawned,
 		r.rows[0].PotionsFloorUsage,
 		r.rows[0].RelicIds,
@@ -429,5 +396,5 @@ func (r iteratorForAddRunArrays) Err() error {
 }
 
 func (q *Queries) AddRunArrays(ctx context.Context, arg []AddRunArraysParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"runarrays"}, []string{"run_id", "daily_mods", "potions_floor_spawned", "potions_floor_usage", "relic_ids"}, &iteratorForAddRunArrays{rows: arg})
+	return q.db.CopyFrom(ctx, []string{"runarrays"}, []string{"run_id", "daily_mods", "master_deck", "potions_floor_spawned", "potions_floor_usage", "relic_ids"}, &iteratorForAddRunArrays{rows: arg})
 }

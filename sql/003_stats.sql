@@ -3,9 +3,8 @@ CREATE VIEW stats_overview AS (
     WITH
         co AS (SELECT '{0.25, 0.5, 0.75}'::float[] as p_quart),
         deck_size AS (
-            SELECT R.id, count(D.ix) as total
-            FROM RunsData R INNER JOIN MasterDecks D ON R.id = D.run_id
-            GROUP BY R.id
+            SELECT R.id, array_length(a.master_deck, 1) as total
+            FROM RunsData R INNER JOIN RunArrays a ON R.id = a.run_id
         )
     SELECT
         CL.id,
@@ -22,29 +21,38 @@ CREATE VIEW stats_overview AS (
 );
 
 CREATE VIEW stats_card_counts AS (
-    SELECT
-        R.character_id as char_id,
-        D.card_id,
-        count(D.ix) as total,
-        sum(case when S.upgrades > 0 then 1 else 0 end) as upgrades
-    FROM RunsData R
-    JOIN MasterDecks D ON R.id = D.run_id
-    JOIN CardSpecs S ON D.card_id = S.id
-    GROUP BY R.character_id, D.card_id
-    ORDER BY D.card_id
+    WITH deck AS (
+        SELECT r.character_id as char_id,
+               unnest(a.master_deck) as card_id
+        FROM RunsData r
+        JOIN RunArrays a ON r.id = a.run_id
+    )
+    SELECT d.char_id,
+           d.card_id,
+           count(d.card_id) as total,
+           sum(case when s.upgrades > 0 then 1 else 0 end) as upgrades
+    FROM deck d
+    JOIN CardSpecs s ON d.card_id = s.id
+    GROUP BY d.char_id, D.card_id
+    ORDER BY d.card_id
 );
 
 CREATE FUNCTION per_character_card_stats(char_id int) RETURNS
     TABLE(card_id int, card text, runs int, wins int, deck float4[], floor float4[])
 LANGUAGE SQL AS $$
-WITH ru AS (SELECT r.id, r.floor_reached, r.victory, count(m.id) as deck_size
+WITH ru AS (SELECT r.id,
+                   r.floor_reached,
+                   r.victory,
+                   array_length(a.master_deck, 1) as deck_size
             FROM runsdata r
-                     INNER JOIN masterdecks m on r.id = m.run_id
-            WHERE r.character_id = char_id
-            GROUP BY r.id),
-     ca AS (SELECT m.card_id, s.card, m.run_id
-            FROM masterdecks m
-                     LEFT JOIN cardspecsex s on m.card_id = s.id)
+                     INNER JOIN runarrays a on r.id = a.run_id
+            WHERE r.character_id = char_id),
+     ca AS (SELECT s.id as card_id,
+                   s.card,
+                   a.run_id
+            FROM runsdata r
+                    INNER JOIN runarrays a on a.run_id = r.id
+                    LEFT JOIN cardspecsex s on s.id = any(a.master_deck))
 SELECT ca.card_id,
        ca.card,
        count(ru.id)         as runs,

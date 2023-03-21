@@ -305,18 +305,12 @@ func (r *RunSchemaJson) AddToDb(ctx context.Context, oc *OrmContext, db *orm.Que
 	ormArrays := []orm.AddRunArraysParams{{
 		RunID:               oc.Runid,
 		DailyMods:           oc.Sc.GetAll(r.DailyMods),
+		MasterDeck:          oc.Cc.GetAll(specsDeck),
 		PotionsFloorSpawned: mapInt32(r.PotionsFloorSpawned),
 		PotionsFloorUsage:   mapInt32(r.PotionsFloorUsage),
 		RelicIds:            oc.Sc.GetAll(r.Relics),
 	}}
 	if _, err = db.AddRunArrays(ctx, ormArrays); err != nil {
-		return
-	}
-	// Add master deck
-	ormDeck := lo.Map(specsDeck, func(c orm.CardSpec, ix int) orm.AddMasterDeckParams {
-		return orm.AddMasterDeckParams{RunID: oc.Runid, CardID: oc.Cc.Get(c), Ix: int16(ix)}
-	})
-	if _, err = db.AddMasterDeck(ctx, ormDeck); err != nil {
 		return
 	}
 	// Add flags

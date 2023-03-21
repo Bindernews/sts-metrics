@@ -149,13 +149,6 @@ type Itemspurged struct {
 	Floor  int16
 }
 
-type Masterdeck struct {
-	ID     int32
-	RunID  int32
-	CardID int32
-	Ix     int16
-}
-
 type Perfloordatum struct {
 	RunID     int32
 	Floor     int16
@@ -188,9 +181,19 @@ type Relicobtain struct {
 type Runarray struct {
 	RunID               int32
 	DailyMods           []int32
+	MasterDeck          []int32
 	PotionsFloorSpawned []int32
 	PotionsFloorUsage   []int32
 	RelicIds            []int32
+}
+
+type Runarraysext struct {
+	RunID               int32
+	DailyMods           []string
+	MasterDeck          []string
+	PotionsFloorSpawned []int32
+	PotionsFloorUsage   []int32
+	Relics              interface{}
 }
 
 type Runflag struct {
@@ -243,7 +246,7 @@ type Scope struct {
 
 type StatsCardCount struct {
 	CharID   int32
-	CardID   int32
+	CardID   interface{}
 	Total    int64
 	Upgrades int64
 }

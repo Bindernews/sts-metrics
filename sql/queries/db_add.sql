@@ -33,15 +33,14 @@ INSERT INTO EventChoices
      relics_obtained_ids)
 VALUES
     ($1,$2,$3,$4,$5,$6,$7,$8);
--- name: AddMasterDeck :copyfrom
-INSERT INTO MasterDecks (run_id, card_id, ix) VALUES ($1,$2,$3);
 -- name: AddBossRelics :copyfrom
 INSERT INTO BossRelics (run_id, not_picked, picked, ord) VALUES ($1,$2,$3,$4);
 -- name: AddPerFloor :copyfrom
 INSERT INTO PerFloorData (run_id, floor, gold, current_hp, max_hp) VALUES ($1,$2,$3,$4,$5);
 -- name: AddRunArrays :copyfrom
-INSERT INTO RunArrays (run_id, daily_mods, potions_floor_spawned, potions_floor_usage, relic_ids)
-VALUES ($1,$2,$3,$4,$5);
+INSERT INTO RunArrays
+    (run_id, daily_mods, master_deck, potions_floor_spawned, potions_floor_usage, relic_ids)
+VALUES ($1,$2,$3,$4,$5,$6);
 -- name: AddItemsPurchased :copyfrom
 INSERT INTO ItemsPurchased (run_id, card_id, floor) VALUES ($1,$2,$3);
 -- name: AddItemsPurged :copyfrom
