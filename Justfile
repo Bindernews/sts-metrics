@@ -7,7 +7,7 @@ cwd := justfile_directory()
 # Build the JSON model using gojsonschema, and then inserts additional code because
 # that only gets us part-way.
 make-model:
-    gojsonschema -p web -o web/json_model.go run.schema.json
+    gojsonschema -p web -o pkg/web/json_model.go run.schema.json
     # Insert imports, change PlayId to be uuid.UUID, add Extra field and code
     # to process said extra field
     sed -ri \
@@ -18,7 +18,7 @@ make-model:
         web/json_model.go
     jq '.properties|keys[]' run.schema.json |\
         awk 'BEGIN{ print "\nvar runSchemaJsonKeys = []string{" } { print "\t"$0"," } END { print "}" }' \
-        >>web/json_model.go
+        >>pkg/web/json_model.go
 
 install-gojsonschema DEST:
     git clone https://github.com/omissis/go-jsonschema {{DEST}}/go-jsonschema

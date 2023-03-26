@@ -4,8 +4,8 @@ import (
 	"context"
 	"os"
 
-	"github.com/bindernews/sts-msr/orm"
-	"github.com/bindernews/sts-msr/tools"
+	"github.com/bindernews/sts-msr/pkg/orm"
+	"github.com/bindernews/sts-msr/pkg/tools"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/jackc/pgx/v4"

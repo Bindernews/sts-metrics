@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/bindernews/sts-msr/tools"
+	"github.com/bindernews/sts-msr/pkg/tools"
 	"github.com/joho/godotenv"
 )
 

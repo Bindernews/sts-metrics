@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/bindernews/sts-msr/orm"
+	"github.com/bindernews/sts-msr/pkg/orm"
 )
 
 // Regex that splits a card into base name and upgrade count.

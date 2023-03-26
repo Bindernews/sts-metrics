@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bindernews/sts-msr/orm"
+	"github.com/bindernews/sts-msr/pkg/orm"
 	"github.com/jackc/pgtype"
 	"github.com/samber/lo"
 )

@@ -14,7 +14,7 @@ import (
 
 	_ "golang.org/x/oauth2"
 
-	"github.com/bindernews/sts-msr/orm"
+	"github.com/bindernews/sts-msr/pkg/orm"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -73,7 +73,7 @@ func (s *MainController) Init(r *gin.Engine) error {
 	}
 
 	r.Use(sessions.Sessions("main", s.Srv.SeStore))
-	r.LoadHTMLGlob("templates/*.html")
+	r.LoadHTMLGlob("pkg/templates/*.html")
 
 	// Make directory to store runs in
 	if cfg.Upload.SaveRawToDisk {

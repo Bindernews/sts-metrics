@@ -1,8 +1,6 @@
 # syntax=docker/dockerfile:1.4
 FROM golang:1.20-alpine3.17 AS build
-COPY web /app/web
-COPY orm /app/orm
-COPY tools /app/tools
+COPY pkg /app/pkg
 COPY cmd /app/cmd
 COPY go.mod go.sum /app/
 WORKDIR /app

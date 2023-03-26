@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/bindernews/sts-msr/orm"
+	"github.com/bindernews/sts-msr/pkg/orm"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 

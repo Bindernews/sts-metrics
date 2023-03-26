@@ -10,7 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/bindernews/sts-msr/web"
+	"github.com/bindernews/sts-msr/pkg/web"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
